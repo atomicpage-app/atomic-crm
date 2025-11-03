@@ -43,6 +43,7 @@ export function LeadsTable({ leads: initialLeads }: Props) {
 
   const cancelEdit = () => {
     setEditingId(null);
+    setEditState({ name: "", phone: "" });
     setFeedback(null);
   };
 
@@ -68,7 +69,9 @@ export function LeadsTable({ leads: initialLeads }: Props) {
 
     const updated = await response.json();
     setLeads((prev) => prev.map((lead) => (lead.id === id ? { ...lead, ...updated } : lead)));
+    setFeedback("Lead atualizado com sucesso.");
     setEditingId(null);
+    setEditState({ name: "", phone: "" });
     setLoading(null);
   };
 
@@ -87,6 +90,7 @@ export function LeadsTable({ leads: initialLeads }: Props) {
     }
 
     setLeads((prev) => prev.filter((lead) => lead.id !== id));
+    setFeedback("Lead removido com sucesso.");
     setLoading(null);
   };
 
