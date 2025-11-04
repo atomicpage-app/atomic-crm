@@ -8,6 +8,8 @@ export async function GET() {
   const RESEND_API_KEY = process.env.RESEND_API_KEY || null;
   const EMAIL_FROM = process.env.EMAIL_FROM || null;
   const APP_URL = process.env.APP_URL || null;
+  const ADMIN_EMAILS = process.env.ADMIN_EMAILS || null;
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || null;
 
   return NextResponse.json({
     present: {
@@ -15,12 +17,16 @@ export async function GET() {
       SUPABASE_SERVICE_ROLE_KEY: !!SUPABASE_SERVICE_ROLE_KEY,
       RESEND_API_KEY: !!RESEND_API_KEY,
       EMAIL_FROM: !!EMAIL_FROM,
-      APP_URL: !!APP_URL
+      APP_URL: !!APP_URL,
+      ADMIN_EMAILS: !!ADMIN_EMAILS,
+      ADMIN_EMAIL: !!ADMIN_EMAIL
     },
     sample: {
       SUPABASE_URL: mask(SUPABASE_URL),
       EMAIL_FROM: EMAIL_FROM,
-      APP_URL: APP_URL
+      APP_URL: APP_URL,
+      ADMIN_EMAILS: ADMIN_EMAILS,
+      ADMIN_EMAIL: ADMIN_EMAIL
     }
   });
 }
