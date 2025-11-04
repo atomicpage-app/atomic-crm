@@ -1,35 +1,27 @@
 import { NextResponse } from "next/server";
-import { assertCronSecret } from "@/lib/cron";
-import { createClient } from "@/lib/db";
+import { db } from "@/lib/db";
 
-export const revalidate = 0;
+export async function POST(req: Request) {
+  const secret = req.headers.get("x-cron-secret");
+  if (secret !== process.env.CRON_SECRET) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
 
-export async function POST() {
   try {
-    assertCronSecret();
-    const db = createClient();
-
-    // Remove pendentes expirados
-    const nowIso = new Date().toISOString();
-    const { data: expired, error: selErr } = await db
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(); // 24h
+    const { error } = await db
       .from("leads_pending")
-      .select("id")
-      .lte("expires_at", nowIso)
-      .limit(1000);
+      .delete()
+      .lt("created_at", cutoff);
 
-    if (selErr) throw selErr;
+    if (error) throw error;
 
-    let removed = 0;
-    if (expired && expired.length) {
-      const ids = expired.map((r) => r.id);
-      const { error: delErr } = await db.from("leads_pending").delete().in("id", ids);
-      if (delErr) throw delErr;
-      removed = ids.length;
-    }
-
-    return NextResponse.json({ ok: true, removed });
-  } catch (err: any) {
-    const status = err?.status || 500;
-    return NextResponse.json({ ok: false, error: String(err?.message || err) }, { status });
+    return NextResponse.json({ ok: true, deletedBefore: cutoff });
+  } catch (error: any) {
+    return NextResponse.json(
+      { ok: false, error: error.message, stack: error.stack },
+      { status: 500 }
+    );
   }
 }
+  
