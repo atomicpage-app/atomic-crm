@@ -1,12 +1,35 @@
-import { createClient } from "@supabase/supabase-js";
+// src/lib/db.ts
+import 'server-only';
+import { createClient } from '@supabase/supabase-js';
+import { env } from '@/env/server';
 
-const url = process.env.SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-if (!url || !serviceRoleKey) {
-  throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+// Segurança extra: se por acaso alguém tentar importar isso no client, falha imediatamente.
+if (typeof window !== 'undefined') {
+  throw new Error('src/lib/db.ts é server-only. Não deve ser importado no client.');
 }
 
-export const db = createClient(url, serviceRoleKey, {
-  auth: { persistSession: false }
-});
+// Opção: tipar o esquema do banco aqui, se tiver types gerados (ex.: Database)
+// import type { Database } from '@/types/supabase'; // opcional
+
+// Evita recriar o client em hot reload durante dev:
+let _db:
+  | ReturnType<typeof createClient>
+  | undefined;
+
+export function getDb() {
+  if (_db) return _db;
+  _db = createClient(
+    env.SUPABASE_URL,
+    env.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      auth: { persistSession: false },
+      global: {
+        headers: { 'x-application': 'atomic-crm' },
+      },
+    }
+  );
+  return _db;
+}
+
+// Atalho conveniente para imports existentes:
+export const db = getDb();

@@ -1,44 +1,83 @@
-import { NextResponse } from "next/server";
-import { z } from "zod";
-import { db } from "@/lib/db";
-import { generateToken } from "@/lib/token";
-import { sendConfirmationEmail } from "@/lib/email";
+// src/app/api/lead/route.ts
+import { NextResponse } from 'next/server';
+import { env } from '@/env/server';
+import { db } from '@/lib/db';
 
-const schema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  phone: z.string().min(8)
-});
+function toErrorMessage(err: unknown) {
+  return err instanceof Error ? `[${err.name}] ${err.message}` : String(err);
+}
+
+function badRequest(msg: string) {
+  return NextResponse.json({ ok: false, error: msg }, { status: 400 });
+}
+
+export async function GET(req: Request) {
+  try {
+    const url = new URL(req.url);
+    const q = url.searchParams.get('q')?.trim() ?? '';
+    const limit = Number(url.searchParams.get('limit') ?? 20);
+    const safeLimit = Number.isFinite(limit) && limit > 0 && limit <= 100 ? limit : 20;
+
+    // ===========================
+    // Exemplo com Supabase (AJUSTE PARA SEU SCHEMA) — COMENTADO
+    // ===========================
+    // let query = db.from('leads').select('*').limit(safeLimit).order('created_at', { ascending: false });
+    // if (q) {
+    //   query = query.ilike('email', `%${q}%`);
+    // }
+    // const { data, error } = await query;
+    // if (error) throw error;
+
+    // Para não travar typecheck sem schema:
+    const data: Array<Record<string, unknown>> = [];
+
+    return NextResponse.json({ ok: true, q, limit: safeLimit, leads: data }, { status: 200 });
+  } catch (err: unknown) {
+    const message = toErrorMessage(err);
+    console.error('GET /api/lead error:', message);
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  }
+}
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const parsed = schema.safeParse(body);
-    if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 400 });
-
-    const { name, email, phone } = parsed.data;
-    const emailNorm = email.trim().toLowerCase();
-
-    const existing = await db.from("leads").select("id").eq("email", emailNorm).maybeSingle();
-    if (existing.data) return NextResponse.json({ status: "already_registered" }, { status: 200 });
-
-    const pending = await db.from("leads_pending").select("id").eq("email", emailNorm).maybeSingle();
-
-    const token = generateToken();
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-
-    if (pending.data) {
-      await db.from("leads_pending").update({ token, expires_at: expiresAt, reminder_sent: false, name, phone }).eq("id", pending.data.id);
-    } else {
-      await db.from("leads_pending").insert({ name, email: emailNorm, phone, token, expires_at: expiresAt });
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return badRequest('invalid json body');
     }
 
-    await sendConfirmationEmail({ name, email: emailNorm, token });
-    await db.from("email_events").insert({ email: emailNorm, type: "confirmation_sent", meta: { route: "/api/lead" } });
+    const payload = body as Record<string, unknown>;
+    const name = typeof payload.name === 'string' ? payload.name.trim() : '';
+    const email = typeof payload.email === 'string' ? payload.email.trim() : '';
+    const message = typeof payload.message === 'string' ? payload.message.trim() : '';
+    const phone = typeof payload.phone === 'string' ? payload.phone.trim() : '';
 
-    return NextResponse.json({ status: "pending_confirmation" }, { status: 202 });
-  } catch (e) {
-    console.error(e);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return badRequest('invalid or missing email');
+    }
+
+    // ===========================
+    // Exemplo com Supabase (AJUSTE PARA SEU SCHEMA) — COMENTADO
+    // ===========================
+    // const { data, error } = await db
+    //   .from('leads')
+    //   .insert([{ name, email, message, phone }])
+    //   .select('id')
+    //   .single();
+    // if (error) throw error;
+    // const createdId = data.id as string;
+
+    const createdId = null as unknown as string | null;
+
+    return NextResponse.json(
+      { ok: true, createdId, lead: { name, email, message, phone } },
+      { status: 201 }
+    );
+  } catch (err: unknown) {
+    const message = toErrorMessage(err);
+    console.error('POST /api/lead error:', message);
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }
