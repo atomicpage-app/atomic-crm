@@ -7,9 +7,12 @@ import { sendConfirmationEmail } from '@/lib/email';
 type LeadRow = {
   id: string;
   email: string;
-  name?: string | null;
-  status?: string | null;
-  confirm_token?: string | null;
+  name: string | null;
+  phone?: string | null;
+  confirmed_at?: string | null; // timestamptz
+  consent_at?: string | null;   // timestamptz
+  source?: string | null;
+  created_at?: string | null;
 };
 
 type EmailEventInsert = {
@@ -62,31 +65,24 @@ export async function POST(req: Request) {
   }
 
   try {
-    // 1) Buscar lead (sem genéricos para evitar unions estranhos)
+    // 1) Buscar lead pelas colunas que existem no schema
     const res = await db
       .from('leads')
-      .select('id,email,name,status,confirm_token')
+      .select('id,email,name') // ✅ somente colunas existentes
       .eq('email', email.toLowerCase())
       .maybeSingle();
 
     if (res.error) throw res.error;
 
-    // ✅ Força um tipo flexível em vez de 'never'
+    // pending pode ser null se não existir lead (permitimos envio mesmo assim no MVP)
     const pending = (res.data ?? null) as Partial<LeadRow> | null;
 
-    // 2) Derivar campos de forma segura
-    const token =
-      (pending?.confirm_token as string | null | undefined) ?? crypto.randomUUID();
+    // 2) Gerar token do link (MVP: sem persistir)
+    const token = crypto.randomUUID();
 
     const targetEmail = (pending?.email as string | undefined) ?? email;
     const targetName = (pending?.name as string | null | undefined) ?? '';
     const leadId = (pending?.id as string | undefined) ?? null;
-
-    // (Opcional) persistir o token quando não existir:
-    // if (leadId && !pending?.confirm_token) {
-    //   const up = await db.from('leads').update({ confirm_token: token }).eq('id', leadId);
-    //   if (up.error) console.error('token update error:', serializeError(up.error));
-    // }
 
     // 3) Enviar e-mail
     await sendConfirmationEmail({
@@ -95,7 +91,7 @@ export async function POST(req: Request) {
       token,
     });
 
-    // 4) Log de evento (não-fatal se a tabela não existir)
+    // 4) Log de evento (opcional; não-fatal se a tabela não existir)
     const emailEvent: EmailEventInsert = {
       email: targetEmail,
       type: 'resend_confirmation',
