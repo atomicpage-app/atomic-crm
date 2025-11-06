@@ -8,11 +8,6 @@ type LeadRow = {
   id: string;
   email: string;
   name: string | null;
-  phone?: string | null;
-  confirmed_at?: string | null; // timestamptz
-  consent_at?: string | null;   // timestamptz
-  source?: string | null;
-  created_at?: string | null;
 };
 
 type EmailEventInsert = {
@@ -65,33 +60,61 @@ export async function POST(req: Request) {
   }
 
   try {
-    // 1) Buscar lead pelas colunas que existem no schema
+    // 1) Buscar lead pelas colunas existentes
     const res = await db
       .from('leads')
-      .select('id,email,name') // ✅ somente colunas existentes
+      .select('id,email,name')
       .eq('email', email.toLowerCase())
       .maybeSingle();
 
     if (res.error) throw res.error;
 
-    // pending pode ser null se não existir lead (permitimos envio mesmo assim no MVP)
     const pending = (res.data ?? null) as Partial<LeadRow> | null;
 
-    // 2) Gerar token do link (MVP: sem persistir)
+    // 2) Gerar token (MVP)
     const token = crypto.randomUUID();
 
     const targetEmail = (pending?.email as string | undefined) ?? email;
     const targetName = (pending?.name as string | null | undefined) ?? '';
     const leadId = (pending?.id as string | undefined) ?? null;
 
-    // 3) Enviar e-mail
+    // 3) PERSISTIR TOKEN — sempre tentamos inserir (com ou sem lead)
+    let tokenSaved = false;
+    let tokenSaveError: unknown = null;
+
+    // 3.1) limpa tokens antigos do mesmo lead (se houver)
+    if (leadId) {
+      const del = await db
+        .from('email_tokens')
+        .delete()
+        .eq('lead_id', leadId)
+        .eq('type', 'confirm');
+      if (del.error) {
+        console.error('[tokens] delete error:', serializeError(del.error));
+      }
+    }
+
+    // 3.2) monta payload e insere
+    const insPayload: Record<string, unknown> = { token, type: 'confirm' };
+    if (leadId) insPayload.lead_id = leadId;
+
+    const insTok = await db.from('email_tokens').insert(insPayload as any);
+    if (insTok.error) {
+      tokenSaveError = serializeError(insTok.error);
+      console.error('[tokens] insert error:', tokenSaveError);
+    } else {
+      tokenSaved = true;
+      console.log('[tokens] insert ok:', { leadId, hasLead: Boolean(leadId) });
+    }
+
+    // 4) Enviar e-mail
     await sendConfirmationEmail({
       name: targetName,
       email: targetEmail,
       token,
     });
 
-    // 4) Log de evento (opcional; não-fatal se a tabela não existir)
+    // 5) Log de evento (não-fatal)
     const emailEvent: EmailEventInsert = {
       email: targetEmail,
       type: 'resend_confirmation',
@@ -99,12 +122,11 @@ export async function POST(req: Request) {
     };
     const ins = await db.from('email_events').insert(emailEvent as any);
     if (ins.error) {
-      console.error('email_events insert error:', serializeError(ins.error));
-      // segue sem lançar
+      console.error('[email_events] insert error:', serializeError(ins.error));
     }
 
     return NextResponse.json(
-      { ok: true, email: targetEmail, leadId, token },
+      { ok: true, email: targetEmail, leadId, token, tokenSaved, tokenSaveError },
       { status: 200 }
     );
   } catch (err: unknown) {
