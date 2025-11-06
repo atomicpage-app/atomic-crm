@@ -60,7 +60,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    // 1) Buscar lead pelas colunas existentes
+    // 1) Buscar lead (somente colunas existentes no seu schema)
     const res = await db
       .from('leads')
       .select('id,email,name')
@@ -71,18 +71,18 @@ export async function POST(req: Request) {
 
     const pending = (res.data ?? null) as Partial<LeadRow> | null;
 
-    // 2) Gerar token (MVP)
+    // 2) Gerar token (MVP; persistiremos abaixo)
     const token = crypto.randomUUID();
 
     const targetEmail = (pending?.email as string | undefined) ?? email;
     const targetName = (pending?.name as string | null | undefined) ?? '';
     const leadId = (pending?.id as string | undefined) ?? null;
 
-    // 3) PERSISTIR TOKEN — sempre tentamos inserir (com ou sem lead)
+    // 3) Persistir token em email_tokens (com ou sem lead_id)
     let tokenSaved = false;
     let tokenSaveError: unknown = null;
 
-    // 3.1) limpa tokens antigos do mesmo lead (se houver)
+    // 3.1) Apaga tokens anteriores do mesmo lead (se houver) para type=confirm
     if (leadId) {
       const del = await db
         .from('email_tokens')
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3.2) monta payload e insere
+    // 3.2) Insere o token novo
     const insPayload: Record<string, unknown> = { token, type: 'confirm' };
     if (leadId) insPayload.lead_id = leadId;
 
@@ -125,8 +125,29 @@ export async function POST(req: Request) {
       console.error('[email_events] insert error:', serializeError(ins.error));
     }
 
+    // 6) Diagnóstico: host do Supabase e leitura do token recém-inserido
+    const supabaseHost = (() => {
+      try { return new URL(process.env.SUPABASE_URL || '').host; } catch { return ''; }
+    })();
+
+    const check = await db
+      .from('email_tokens')
+      .select('id, lead_id, token, type, created_at, expires_at')
+      .eq('token', token)
+      .maybeSingle();
+
     return NextResponse.json(
-      { ok: true, email: targetEmail, leadId, token, tokenSaved, tokenSaveError },
+      {
+        ok: true,
+        email: targetEmail,
+        leadId,
+        token,
+        tokenSaved,
+        tokenSaveError,
+        supabaseHost,
+        justInserted: check.data ?? null,
+        checkError: check.error ? serializeError(check.error) : null,
+      },
       { status: 200 }
     );
   } catch (err: unknown) {
