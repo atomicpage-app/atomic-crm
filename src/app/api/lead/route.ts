@@ -1,83 +1,79 @@
-// src/app/api/lead/route.ts
-import { NextResponse } from 'next/server';
-import { env } from '@/env/server';
-import { db } from '@/lib/db';
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { Resend } from "resend";
 
-function toErrorMessage(err: unknown) {
-  return err instanceof Error ? `[${err.name}] ${err.message}` : String(err);
-}
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY! // server-side apenas
+);
 
-function badRequest(msg: string) {
-  return NextResponse.json({ ok: false, error: msg }, { status: 400 });
-}
+const resend = new Resend(process.env.RESEND_API_KEY!);
 
-export async function GET(req: Request) {
-  try {
-    const url = new URL(req.url);
-    const q = url.searchParams.get('q')?.trim() ?? '';
-    const limit = Number(url.searchParams.get('limit') ?? 20);
-    const safeLimit = Number.isFinite(limit) && limit > 0 && limit <= 100 ? limit : 20;
-
-    // ===========================
-    // Exemplo com Supabase (AJUSTE PARA SEU SCHEMA) — COMENTADO
-    // ===========================
-    // let query = db.from('leads').select('*').limit(safeLimit).order('created_at', { ascending: false });
-    // if (q) {
-    //   query = query.ilike('email', `%${q}%`);
-    // }
-    // const { data, error } = await query;
-    // if (error) throw error;
-
-    // Para não travar typecheck sem schema:
-    const data: Array<Record<string, unknown>> = [];
-
-    return NextResponse.json({ ok: true, q, limit: safeLimit, leads: data }, { status: 200 });
-  } catch (err: unknown) {
-    const message = toErrorMessage(err);
-    console.error('GET /api/lead error:', message);
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
-  }
+// Função auxiliar para gerar URL base (funciona local e em produção)
+function getBaseUrl() {
+  const url = process.env.APP_BASE_URL || process.env.VERCEL_URL;
+  if (!url) return "http://localhost:3000";
+  return url.startsWith("http") ? url : `https://${url}`;
 }
 
 export async function POST(req: Request) {
   try {
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return badRequest('invalid json body');
+    const { email, name } = await req.json();
+    if (!email) {
+      return NextResponse.json({ ok: false, error: "MISSING_EMAIL" }, { status: 400 });
     }
 
-    const payload = body as Record<string, unknown>;
-    const name = typeof payload.name === 'string' ? payload.name.trim() : '';
-    const email = typeof payload.email === 'string' ? payload.email.trim() : '';
-    const message = typeof payload.message === 'string' ? payload.message.trim() : '';
-    const phone = typeof payload.phone === 'string' ? payload.phone.trim() : '';
+    const cleanEmail = email.trim().toLowerCase();
+    const token = crypto.randomUUID();
+    const now = new Date();
+    const expires = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(); // expira em 24h
 
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return badRequest('invalid or missing email');
+    // Upsert: cria novo lead ou atualiza se já existir
+    const { data: lead, error: upsertError } = await supabase
+      .from("leads")
+      .upsert({
+        email: cleanEmail,
+        name: name || null,
+        confirmation_token: token,
+        confirmation_sent_at: now.toISOString(),
+        confirmation_expires_at: expires,
+        confirmation_confirmed_at: null,
+      }, { onConflict: "email" })
+      .select("id, email")
+      .single();
+
+    if (upsertError) {
+      console.error("DB_UPSERT_ERROR:", upsertError);
+      return NextResponse.json({ ok: false, error: "DB_UPSERT_ERROR" }, { status: 500 });
     }
 
-    // ===========================
-    // Exemplo com Supabase (AJUSTE PARA SEU SCHEMA) — COMENTADO
-    // ===========================
-    // const { data, error } = await db
-    //   .from('leads')
-    //   .insert([{ name, email, message, phone }])
-    //   .select('id')
-    //   .single();
-    // if (error) throw error;
-    // const createdId = data.id as string;
+    const confirmUrl = `${getBaseUrl()}/api/confirm?token=${token}&email=${encodeURIComponent(cleanEmail)}`;
 
-    const createdId = null as unknown as string | null;
+    // Enviar o e-mail de confirmação
+    await resend.emails.send({
+      from: process.env.RESEND_FROM!,
+      to: [cleanEmail],
+      subject: "Confirme seu cadastro no Atomic CRM",
+      html: `
+        <p>Olá${name ? `, ${name}` : ""}!</p>
+        <p>Confirme seu cadastro clicando no link abaixo:</p>
+        <p><a href="${confirmUrl}">Confirmar e-mail</a></p>
+        <p>Este link expira em 24 horas.</p>
+      `,
+    });
 
+    return NextResponse.json({
+      ok: true,
+      action: "send",
+      id: lead.id,
+      email: lead.email,
+      confirmUrl,
+    });
+  } catch (err: any) {
+    console.error("UNEXPECTED_ERROR:", err);
     return NextResponse.json(
-      { ok: true, createdId, lead: { name, email, message, phone } },
-      { status: 201 }
+      { ok: false, error: "UNEXPECTED_ERROR", detail: err.message },
+      { status: 500 }
     );
-  } catch (err: unknown) {
-    const message = toErrorMessage(err);
-    console.error('POST /api/lead error:', message);
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }
