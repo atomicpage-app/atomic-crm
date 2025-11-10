@@ -1,0 +1,7 @@
+POST https://atomic-crm-qnrb.vercel.app/api/lead
+Content-Type: application/json
+
+{
+  "email": "jrorasec@gmail.com",
+  "name": "Jairo"
+}
