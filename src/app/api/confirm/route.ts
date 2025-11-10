@@ -1,15 +1,19 @@
-// src/app/api/confirm/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 export async function GET(req: Request) {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceKey) {
+    return NextResponse.json({ ok: false, error: "MISSING_SUPABASE_ENVS" }, { status: 500 });
+  }
+
+  const supabase = createClient(supabaseUrl, serviceKey);
+
   try {
     const { searchParams } = new URL(req.url);
     const token = searchParams.get("token")?.trim();
@@ -56,6 +60,7 @@ export async function GET(req: Request) {
       confirmedId: updated?.id ?? lead.id
     });
   } catch (err: any) {
+    console.error("UNEXPECTED_ERROR:", err);
     return NextResponse.json({ ok: false, error: "UNEXPECTED_ERROR", detail: err?.message }, { status: 500 });
   }
 }
