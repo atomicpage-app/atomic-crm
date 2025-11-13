@@ -79,6 +79,7 @@ export async function POST(req: Request) {
       cleanEmail
     )}`;
 
+
     try {
       await resend.emails.send({
         from,
