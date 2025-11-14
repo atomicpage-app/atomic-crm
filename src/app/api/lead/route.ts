@@ -1,119 +1,188 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { Resend } from "resend";
+import crypto from "crypto";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+// --- Supabase (server-side, usando service role) ---
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Utilitário para obter a base URL do app
-function baseUrl() {
-  const url = process.env.APP_URL || process.env.VERCEL_URL || "http://localhost:3000";
-  return url.startsWith("http") ? url : `https://${url}`;
+if (!supabaseUrl || !supabaseServiceRoleKey) {
+  console.warn(
+    "[/api/lead] Variáveis de ambiente do Supabase não configuradas corretamente."
+  );
 }
 
-export async function POST(req: Request) {
+const supabase = supabaseUrl && supabaseServiceRoleKey
+  ? createClient(supabaseUrl, supabaseServiceRoleKey)
+  : null;
+
+// --- Helpers de resposta com CORS ---
+function jsonResponse(body: any, init?: { status?: number }) {
+  return new NextResponse(JSON.stringify(body), {
+    status: init?.status ?? 200,
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  });
+}
+
+// --- OPTIONS para preflight CORS ---
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  });
+}
+
+// --- POST /api/lead ---
+export async function POST(req: NextRequest) {
   try {
-    // Ler variáveis de ambiente em runtime
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const resendKey = process.env.RESEND_API_KEY;
-    const from = process.env.EMAIL_FROM;
-
-    if (!supabaseUrl || !serviceKey) {
-      return NextResponse.json(
-        { ok: false, error: "MISSING_SUPABASE_ENVS" },
+    if (!supabase) {
+      return jsonResponse(
+        { ok: false, error: "Supabase não configurado no servidor." },
         { status: 500 }
       );
     }
-    if (!resendKey || !from) {
-      return NextResponse.json(
-        { ok: false, error: "MISSING_EMAIL_ENVS" },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, serviceKey);
-    const resend = new Resend(resendKey);
 
     const body = await req.json().catch(() => null);
-    if (!body || !body.email) {
-      return NextResponse.json(
-        { ok: false, error: "MISSING_EMAIL" },
+
+    if (!body || typeof body !== "object") {
+      return jsonResponse(
+        { ok: false, error: "Body inválido. Envie um JSON." },
         { status: 400 }
       );
     }
 
-    const cleanEmail = String(body.email).trim().toLowerCase();
-    const name = body.name ? String(body.name).trim() : null;
+    let { name, email, phone, source } = body as {
+      name?: string;
+      email?: string;
+      phone?: string;
+      source?: string;
+    };
 
+    // Normalizações
+    name = (name ?? "").toString().trim() || null;
+    email = (email ?? "").toString().trim().toLowerCase();
+    phone = (phone ?? "").toString();
+    source = (source ?? "").toString().trim() || null;
+
+    if (!email) {
+      return jsonResponse(
+        { ok: false, error: "Email é obrigatório." },
+        { status: 400 }
+      );
+    }
+
+    // Limpa o telefone: mantém apenas dígitos
+    const cleanedPhone = phone.replace(/\D/g, "");
+    const phoneToSave = cleanedPhone.length > 0 ? cleanedPhone : null;
+
+    // Token de confirmação (mantém o fluxo existente de confirmação por e-mail)
     const token = crypto.randomUUID();
-    const now = new Date();
-    const expires = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
 
-    const { data: lead, error: upsertErr } = await supabase
+    // Expiração em 24h (ajuste se já tiver outra convenção)
+    const expiresInHours = 24;
+    const confirmationExpiresAt = new Date(
+      Date.now() + expiresInHours * 60 * 60 * 1000
+    ).toISOString();
+
+    // Insere o lead na tabela
+    const { data, error } = await supabase
       .from("leads")
-      .upsert(
-        {
-          email: cleanEmail,
-          name,
-          confirmation_token: token,
-          confirmation_sent_at: now.toISOString(),
-          confirmation_expires_at: expires,
-          confirmation_confirmed_at: null,
-        },
-        { onConflict: "email" }
-      )
-      .select("id,email")
+      .insert({
+        name,
+        email,
+        phone: phoneToSave,
+        source,
+        token,
+        confirmation_expires_at: confirmationExpiresAt,
+      })
+      .select("id")
       .single();
 
-    if (upsertErr) {
-      console.error("DB_UPSERT_ERROR:", upsertErr);
-      return NextResponse.json(
-        { ok: false, error: "DB_UPSERT_ERROR" },
+    if (error) {
+      console.error("[/api/lead] Erro ao inserir lead:", error);
+      return jsonResponse(
+        { ok: false, error: "Erro ao salvar lead." },
         { status: 500 }
       );
     }
 
-    // 👉 Agora o link vai para /confirm (página) e não /api/confirm diretamente
-    const confirmUrl = `${baseUrl()}/confirm?token=${token}&email=${encodeURIComponent(
-      cleanEmail
-    )}`;
+    // Disparo de e-mail de confirmação
+    // --------------------------------
+    // Aqui assumo que você está usando Resend.
+    // Se já tiver uma função utilitária de envio, você pode substituir esse bloco.
+    const appBaseUrl =
+      process.env.NEXT_PUBLIC_APP_BASE_URL ||
+      "https://atomic-crm-qnrb.vercel.app";
 
+    const confirmUrl = `${appBaseUrl}/confirm?token=${encodeURIComponent(
+      token
+    )}&email=${encodeURIComponent(email)}`;
 
-    try {
-      await resend.emails.send({
-        from,
-        to: [cleanEmail],
-        subject: "Confirme seu cadastro no Atomic CRM",
-        html: `
-          <p>Olá${name ? `, ${name}` : ""}!</p>
-          <p>Confirme seu cadastro clicando no link abaixo:</p>
-          <p><a href="${confirmUrl}">Confirmar e-mail</a></p>
-          <p>Este link expira em 24 horas.</p>
-        `,
-      });
-    } catch (mailErr: any) {
-      console.error("MAIL_SEND_ERROR:", mailErr);
-      return NextResponse.json(
-        { ok: false, error: "MAIL_SEND_ERROR", detail: mailErr?.message },
-        { status: 502 }
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const resendFrom = process.env.RESEND_FROM;
+
+    if (!resendApiKey || !resendFrom) {
+      console.warn(
+        "[/api/lead] RESEND_API_KEY ou RESEND_FROM não configurados. E-mail de confirmação não será enviado."
       );
+    } else {
+      const { Resend } = await import("resend");
+      const resend = new Resend(resendApiKey);
+
+      try {
+        await resend.emails.send({
+          from: resendFrom,
+          to: email,
+          subject: "Confirme seu cadastro no Atomic CRM",
+          html: `
+            <p>Olá${name ? `, ${name}` : ""}!</p>
+            <p>Recebemos seu cadastro no <strong>Atomic CRM</strong>.</p>
+            <p>Para confirmar seu cadastro, clique no botão abaixo:</p>
+            <p>
+              <a href="${confirmUrl}" style="
+                display:inline-block;
+                padding:12px 20px;
+                background:#111827;
+                color:#ffffff;
+                text-decoration:none;
+                border-radius:6px;
+                font-weight:600;
+              ">
+                Confirmar cadastro
+              </a>
+            </p>
+            <p>Ou copie e cole este link no navegador:</p>
+            <p><a href="${confirmUrl}">${confirmUrl}</a></p>
+          `,
+        });
+      } catch (err) {
+        console.error("[/api/lead] Erro ao enviar e-mail de confirmação:", err);
+        // Não consideramos erro fatal para o lead em si; apenas registramos.
+      }
     }
 
-    return NextResponse.json(
-      {
-        ok: true,
-        action: "send",
-        id: lead.id,
-        email: lead.email,
-        confirmUrl,
-      },
-      { status: 200 }
-    );
-  } catch (err: any) {
-    console.error("UNEXPECTED_ERROR:", err);
-    return NextResponse.json(
-      { ok: false, error: "UNEXPECTED_ERROR", detail: err?.message },
+    return jsonResponse({
+      ok: true,
+      leadId: data.id,
+      email,
+      name,
+      phone: phoneToSave,
+      source,
+      confirmation_expires_at: confirmationExpiresAt,
+    });
+  } catch (err) {
+    console.error("[/api/lead] Erro inesperado:", err);
+    return jsonResponse(
+      { ok: false, error: "Erro interno ao processar o lead." },
       { status: 500 }
     );
   }
