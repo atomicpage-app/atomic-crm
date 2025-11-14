@@ -67,13 +67,13 @@ export async function POST(req: NextRequest) {
       source?: string;
     };
 
-    // Normalizações
-    name = (name ?? "").toString().trim() || null;
-    email = (email ?? "").toString().trim().toLowerCase();
-    phone = (phone ?? "").toString();
-    source = (source ?? "").toString().trim() || null;
+    // Normalizações em variáveis separadas (sem colocar null em name/source)
+    const normalizedName = (name ?? "").toString().trim();
+    const normalizedEmail = (email ?? "").toString().trim().toLowerCase();
+    const normalizedPhone = (phone ?? "").toString();
+    const normalizedSource = (source ?? "").toString().trim();
 
-    if (!email) {
+    if (!normalizedEmail) {
       return jsonResponse(
         { ok: false, error: "Email é obrigatório." },
         { status: 400 }
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Limpa o telefone: mantém apenas dígitos
-    const cleanedPhone = phone.replace(/\D/g, "");
+    const cleanedPhone = normalizedPhone.replace(/\D/g, "");
     const phoneToSave = cleanedPhone.length > 0 ? cleanedPhone : null;
 
     // Token de confirmação (mantém o fluxo existente de confirmação por e-mail)
@@ -97,10 +97,10 @@ export async function POST(req: NextRequest) {
     const { data, error } = await supabase
       .from("leads")
       .insert({
-        name,
-        email,
+        name: normalizedName || null,
+        email: normalizedEmail,
         phone: phoneToSave,
-        source,
+        source: normalizedSource || null,
         token,
         confirmation_expires_at: confirmationExpiresAt,
       })
@@ -116,16 +116,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Disparo de e-mail de confirmação
-    // --------------------------------
-    // Aqui assumo que você está usando Resend.
-    // Se já tiver uma função utilitária de envio, você pode substituir esse bloco.
     const appBaseUrl =
       process.env.NEXT_PUBLIC_APP_BASE_URL ||
       "https://atomic-crm-qnrb.vercel.app";
 
     const confirmUrl = `${appBaseUrl}/confirm?token=${encodeURIComponent(
       token
-    )}&email=${encodeURIComponent(email)}`;
+    )}&email=${encodeURIComponent(normalizedEmail)}`;
 
     const resendApiKey = process.env.RESEND_API_KEY;
     const resendFrom = process.env.RESEND_FROM;
@@ -141,10 +138,10 @@ export async function POST(req: NextRequest) {
       try {
         await resend.emails.send({
           from: resendFrom,
-          to: email,
+          to: normalizedEmail,
           subject: "Confirme seu cadastro no Atomic CRM",
           html: `
-            <p>Olá${name ? `, ${name}` : ""}!</p>
+            <p>Olá${normalizedName ? `, ${normalizedName}` : ""}!</p>
             <p>Recebemos seu cadastro no <strong>Atomic CRM</strong>.</p>
             <p>Para confirmar seu cadastro, clique no botão abaixo:</p>
             <p>
@@ -173,10 +170,10 @@ export async function POST(req: NextRequest) {
     return jsonResponse({
       ok: true,
       leadId: data.id,
-      email,
-      name,
+      email: normalizedEmail,
+      name: normalizedName || null,
       phone: phoneToSave,
-      source,
+      source: normalizedSource || null,
       confirmation_expires_at: confirmationExpiresAt,
     });
   } catch (err) {
