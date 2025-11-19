@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { DeleteLeadButton } from './DeleteLeadButton';
 
 type LeadStatus = 'confirmed' | 'pending' | 'expired_with_phone' | 'expired';
 
@@ -169,6 +170,14 @@ export default function LeadsDashboardPage() {
     }
   }
 
+  // Quando um lead for excluído com sucesso
+  function handleLeadDeleted(id: string) {
+    // feedback imediato na tabela
+    setLeads((prev) => prev.filter((lead) => lead.id !== id));
+    // sincroniza summary/paginação com o backend
+    fetchLeads();
+  }
+
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div>
@@ -269,6 +278,9 @@ export default function LeadsDashboardPage() {
                   <th className="text-left px-3 py-2 font-medium">
                     Confirmado em
                   </th>
+                  <th className="text-left px-3 py-2 font-medium">
+                    Ações
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -294,6 +306,12 @@ export default function LeadsDashboardPage() {
                     </td>
                     <td className="px-3 py-2">
                       {formatDate(lead.confirmed_at)}
+                    </td>
+                    <td className="px-3 py-2">
+                      <DeleteLeadButton
+                        leadId={lead.id}
+                        onDeleted={handleLeadDeleted}
+                      />
                     </td>
                   </tr>
                 ))}
