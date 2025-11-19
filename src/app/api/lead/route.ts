@@ -107,13 +107,24 @@ export async function POST(req: NextRequest) {
       .select("id")
       .single();
 
-    if (error) {
-      console.error("[/api/lead] Erro ao inserir lead:", error);
-      return jsonResponse(
-        { ok: false, error: "Erro ao salvar lead." },
-        { status: 500 }
-      );
-    }
+if (error) {
+  console.error("[/api/lead] Erro ao inserir lead:", error);
+
+  // ⚠️ DEBUG: expondo detalhes do erro na resposta
+  return jsonResponse(
+    {
+      ok: false,
+      error: "Erro ao salvar lead.",
+      supabaseError: {
+        message: (error as any).message,
+        details: (error as any).details,
+        hint: (error as any).hint,
+        code: (error as any).code,
+      },
+    },
+    { status: 500 }
+  );
+}
 
     // Disparo de e-mail de confirmação
     const appBaseUrl =
