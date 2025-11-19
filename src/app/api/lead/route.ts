@@ -188,4 +188,27 @@ export async function POST(req: NextRequest) {
         });
       } catch (err) {
         console.error(
-          "
+          "[/api/lead] Erro ao enviar e-mail de confirmação:",
+          err
+        );
+        // Não consideramos erro fatal para o lead em si; apenas registramos.
+      }
+    }
+
+    return jsonResponse({
+      ok: true,
+      leadId: data.id,
+      email: normalizedEmail,
+      name: normalizedName || null,
+      phone: phoneToSave,
+      source: normalizedSource || null,
+      confirmation_expires_at: confirmationExpiresAt,
+    });
+  } catch (err) {
+    console.error("[/api/lead] Erro inesperado:", err);
+    return jsonResponse(
+      { ok: false, error: "Erro interno ao processar o lead." },
+      { status: 500 }
+    );
+  }
+}
