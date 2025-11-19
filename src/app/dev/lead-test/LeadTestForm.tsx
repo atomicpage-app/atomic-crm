@@ -25,6 +25,11 @@ type CreateLeadResponse = {
     hint?: string;
     code?: string;
   };
+  emailStatus?: "not_configured" | "sent" | "failed";
+  emailError?: {
+    message?: string;
+    name?: string;
+  } | null;
 };
 
 export default function LeadTestForm() {
@@ -72,8 +77,13 @@ export default function LeadTestForm() {
         const apiError = data?.error;
         const supa = data?.supabaseError;
 
-        if (supa) {
-          // Exibe o erro detalhado do Supabase
+        if (apiError === "EMAIL_ALREADY_EXISTS") {
+          setErrorMessage(
+            "Este e-mail já está cadastrado. Verifique sua caixa de entrada (incluindo spam) ou use outro endereço."
+          );
+        } else if (apiError === "Email é obrigatório.") {
+          setErrorMessage("A API recusou a requisição: e-mail é obrigatório.");
+        } else if (supa) {
           const parts = [
             "Erro no Supabase ao salvar o lead.",
             supa.message && `message: ${supa.message}`,
@@ -83,8 +93,6 @@ export default function LeadTestForm() {
           ].filter(Boolean);
 
           setErrorMessage(parts.join(" | "));
-        } else if (apiError === "Email é obrigatório.") {
-          setErrorMessage("A API recusou a requisição: e-mail é obrigatório.");
         } else {
           setErrorMessage(
             apiError ||
@@ -97,9 +105,24 @@ export default function LeadTestForm() {
 
       const email = data.email ?? form.email;
 
-      setSuccessMessage(
-        `Lead cadastrado com sucesso! Se o envio de e-mail estiver configurado, "${email}" deve receber o link de confirmação em instantes.`
-      );
+      // Mensagem base de sucesso
+      let baseMsg = `Lead cadastrado com sucesso para "${email}".`;
+
+      if (data.emailStatus === "not_configured") {
+        baseMsg +=
+          " Porém, o envio de e-mail NÃO foi tentado porque RESEND_API_KEY/RESEND_FROM não estão configurados no backend.";
+      } else if (data.emailStatus === "failed") {
+        baseMsg +=
+          " Tentamos enviar o e-mail de confirmação, mas houve erro no serviço de e-mail.";
+        if (data.emailError?.message) {
+          baseMsg += ` Detalhe: ${data.emailError.message}`;
+        }
+      } else if (data.emailStatus === "sent") {
+        baseMsg +=
+          " O e-mail de confirmação foi enviado com sucesso (segundo o backend). Verifique a caixa de entrada e spam.";
+      }
+
+      setSuccessMessage(baseMsg);
 
       // limpa campos principais, mantém a source
       setForm((prev) => ({
@@ -179,7 +202,7 @@ export default function LeadTestForm() {
       </div>
 
       {errorMessage && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+        <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2 whitespace-pre-line">
           {errorMessage}
         </p>
       )}
