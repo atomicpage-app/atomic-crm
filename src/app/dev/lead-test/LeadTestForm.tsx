@@ -19,6 +19,12 @@ type CreateLeadResponse = {
   source?: string | null;
   confirmation_expires_at?: string;
   error?: string;
+  supabaseError?: {
+    message?: string;
+    details?: string;
+    hint?: string;
+    code?: string;
+  };
 };
 
 export default function LeadTestForm() {
@@ -61,9 +67,23 @@ export default function LeadTestForm() {
       }
 
       if (!res.ok || !data?.ok) {
-        const apiError = data?.error;
+        console.error("Erro ao criar lead:", data);
 
-        if (apiError === "Email é obrigatório.") {
+        const apiError = data?.error;
+        const supa = data?.supabaseError;
+
+        if (supa) {
+          // Exibe o erro detalhado do Supabase
+          const parts = [
+            "Erro no Supabase ao salvar o lead.",
+            supa.message && `message: ${supa.message}`,
+            supa.details && `details: ${supa.details}`,
+            supa.hint && `hint: ${supa.hint}`,
+            supa.code && `code: ${supa.code}`,
+          ].filter(Boolean);
+
+          setErrorMessage(parts.join(" | "));
+        } else if (apiError === "Email é obrigatório.") {
           setErrorMessage("A API recusou a requisição: e-mail é obrigatório.");
         } else {
           setErrorMessage(
