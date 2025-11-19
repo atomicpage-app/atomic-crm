@@ -12,9 +12,10 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
   );
 }
 
-const supabase = supabaseUrl && supabaseServiceRoleKey
-  ? createClient(supabaseUrl, supabaseServiceRoleKey)
-  : null;
+const supabase =
+  supabaseUrl && supabaseServiceRoleKey
+    ? createClient(supabaseUrl, supabaseServiceRoleKey)
+    : null;
 
 // --- Helpers de resposta com CORS ---
 function jsonResponse(body: any, init?: { status?: number }) {
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
         email: normalizedEmail,
         phone: phoneToSave,
         source: normalizedSource || null,
-        confirmation_token: token, // <- nome correto da coluna
+        confirmation_token: token, // coluna correta no schema
         confirmation_expires_at: confirmationExpiresAt,
       })
       .select("id")
@@ -110,17 +111,30 @@ export async function POST(req: NextRequest) {
     if (error) {
       console.error("[/api/lead] Erro ao inserir lead:", error);
 
-      // ⚠️ DEBUG: expondo detalhes do erro na resposta
+      const supaErr = {
+        message: (error as any).message,
+        details: (error as any).details,
+        hint: (error as any).hint,
+        code: (error as any).code,
+      };
+
+      // 23505 = unique violation (email já cadastrado)
+      if ((error as any).code === "23505") {
+        return jsonResponse(
+          {
+            ok: false,
+            error: "EMAIL_ALREADY_EXISTS",
+            supabaseError: supaErr,
+          },
+          { status: 409 }
+        );
+      }
+
       return jsonResponse(
         {
           ok: false,
           error: "Erro ao salvar lead.",
-          supabaseError: {
-            message: (error as any).message,
-            details: (error as any).details,
-            hint: (error as any).hint,
-            code: (error as any).code,
-          },
+          supabaseError: supaErr,
         },
         { status: 500 }
       );
@@ -173,25 +187,5 @@ export async function POST(req: NextRequest) {
           `,
         });
       } catch (err) {
-        console.error("[/api/lead] Erro ao enviar e-mail de confirmação:", err);
-        // Não consideramos erro fatal para o lead em si; apenas registramos.
-      }
-    }
-
-    return jsonResponse({
-      ok: true,
-      leadId: data.id,
-      email: normalizedEmail,
-      name: normalizedName || null,
-      phone: phoneToSave,
-      source: normalizedSource || null,
-      confirmation_expires_at: confirmationExpiresAt,
-    });
-  } catch (err) {
-    console.error("[/api/lead] Erro inesperado:", err);
-    return jsonResponse(
-      { ok: false, error: "Erro interno ao processar o lead." },
-      { status: 500 }
-    );
-  }
-}
+        console.error(
+          "
