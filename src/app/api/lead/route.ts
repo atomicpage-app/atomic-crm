@@ -101,30 +101,30 @@ export async function POST(req: NextRequest) {
         email: normalizedEmail,
         phone: phoneToSave,
         source: normalizedSource || null,
-        token,
+        confirmation_token: token, // <- nome correto da coluna
         confirmation_expires_at: confirmationExpiresAt,
       })
       .select("id")
       .single();
 
-if (error) {
-  console.error("[/api/lead] Erro ao inserir lead:", error);
+    if (error) {
+      console.error("[/api/lead] Erro ao inserir lead:", error);
 
-  // ⚠️ DEBUG: expondo detalhes do erro na resposta
-  return jsonResponse(
-    {
-      ok: false,
-      error: "Erro ao salvar lead.",
-      supabaseError: {
-        message: (error as any).message,
-        details: (error as any).details,
-        hint: (error as any).hint,
-        code: (error as any).code,
-      },
-    },
-    { status: 500 }
-  );
-}
+      // ⚠️ DEBUG: expondo detalhes do erro na resposta
+      return jsonResponse(
+        {
+          ok: false,
+          error: "Erro ao salvar lead.",
+          supabaseError: {
+            message: (error as any).message,
+            details: (error as any).details,
+            hint: (error as any).hint,
+            code: (error as any).code,
+          },
+        },
+        { status: 500 }
+      );
+    }
 
     // Disparo de e-mail de confirmação
     const appBaseUrl =
