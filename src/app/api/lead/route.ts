@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Disparo de e-mail de confirmação
+    // --- Disparo de e-mail de confirmação (com status) ---
     const appBaseUrl =
       process.env.NEXT_PUBLIC_APP_BASE_URL ||
       "https://atomic-crm-qnrb.vercel.app";
@@ -152,10 +152,14 @@ export async function POST(req: NextRequest) {
     const resendApiKey = process.env.RESEND_API_KEY;
     const resendFrom = process.env.RESEND_FROM;
 
+    let emailStatus: "not_configured" | "sent" | "failed" = "not_configured";
+    let emailError: { message?: string; name?: string } | null = null;
+
     if (!resendApiKey || !resendFrom) {
       console.warn(
         "[/api/lead] RESEND_API_KEY ou RESEND_FROM não configurados. E-mail de confirmação não será enviado."
       );
+      emailStatus = "not_configured";
     } else {
       const { Resend } = await import("resend");
       const resend = new Resend(resendApiKey);
@@ -186,12 +190,18 @@ export async function POST(req: NextRequest) {
             <p><a href="${confirmUrl}">${confirmUrl}</a></p>
           `,
         });
-      } catch (err) {
+
+        emailStatus = "sent";
+      } catch (err: any) {
         console.error(
           "[/api/lead] Erro ao enviar e-mail de confirmação:",
           err
         );
-        // Não consideramos erro fatal para o lead em si; apenas registramos.
+        emailStatus = "failed";
+        emailError = {
+          message: err?.message,
+          name: err?.name,
+        };
       }
     }
 
@@ -203,6 +213,8 @@ export async function POST(req: NextRequest) {
       phone: phoneToSave,
       source: normalizedSource || null,
       confirmation_expires_at: confirmationExpiresAt,
+      emailStatus,
+      emailError,
     });
   } catch (err) {
     console.error("[/api/lead] Erro inesperado:", err);

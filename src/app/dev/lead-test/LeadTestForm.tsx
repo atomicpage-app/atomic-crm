@@ -110,7 +110,7 @@ export default function LeadTestForm() {
 
       if (data.emailStatus === "not_configured") {
         baseMsg +=
-          " Porém, o envio de e-mail NÃO foi tentado porque RESEND_API_KEY/RESEND_FROM não estão configurados no backend.";
+          " Porém, o envio de e-mail NÃO foi tentado porque RESEND_API_KEY/RESEND_FROM não estão configurados corretamente no backend.";
       } else if (data.emailStatus === "failed") {
         baseMsg +=
           " Tentamos enviar o e-mail de confirmação, mas houve erro no serviço de e-mail.";
