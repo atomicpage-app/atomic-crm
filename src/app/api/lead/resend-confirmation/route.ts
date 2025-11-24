@@ -1,158 +1,168 @@
-// src/app/api/resend-confirmation/route.ts
-import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { env } from '@/env/server';
-import { sendConfirmationEmail } from '@/lib/email';
+// src/app/api/lead/resend-confirmation/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
+import { sendLeadConfirmationEmail } from "@/lib/email/sendLeadConfirmationEmail";
 
-type LeadRow = {
-  id: string;
-  email: string;
-  name: string | null;
-};
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-type EmailEventInsert = {
-  email: string;
-  type: string;
-  meta?: Record<string, unknown>;
-};
-
-function serializeError(err: unknown) {
-  if (err instanceof Error) {
-    const base: any = { name: err.name, message: err.message };
-    for (const k of Object.keys(err as any)) base[k] = (err as any)[k];
-    return base;
-  }
-  if (typeof err === 'object' && err) {
-    try { return JSON.parse(JSON.stringify(err)); } catch { return { raw: String(err) }; }
-  }
-  return { raw: String(err) };
+if (!supabaseUrl || !supabaseServiceRoleKey) {
+  console.warn(
+    "[/api/lead/resend-confirmation] Variáveis de ambiente do Supabase não configuradas corretamente."
+  );
 }
 
-function badRequest(msg: string) {
-  return NextResponse.json({ ok: false, error: msg }, { status: 400 });
+const supabase =
+  supabaseUrl && supabaseServiceRoleKey
+    ? createClient(supabaseUrl, supabaseServiceRoleKey)
+    : null;
+
+function jsonResponse(body: any, init?: { status?: number }) {
+  return new NextResponse(JSON.stringify(body), {
+    status: init?.status ?? 200,
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  });
 }
 
-export async function GET(req: Request) {
-  const secret = new URL(req.url).searchParams.get('secret') ?? req.headers.get('x-cron-secret');
-  if (!secret || secret !== env.CRON_SECRET) {
-    return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
-  }
-  return NextResponse.json({ ok: true, route: 'resend-confirmation', mode: 'healthcheck' });
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  });
 }
 
-export async function POST(req: Request) {
-  const url = new URL(req.url);
-  const secret = url.searchParams.get('secret') ?? req.headers.get('x-cron-secret');
-  if (!secret || secret !== env.CRON_SECRET) {
-    return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
-  }
-
-  let body: unknown;
+// POST /api/lead/resend-confirmation
+// Body: { email?: string; leadId?: string }
+export async function POST(req: NextRequest) {
   try {
-    body = await req.json();
-  } catch {
-    return badRequest('invalid json body');
-  }
+    if (!supabase) {
+      return jsonResponse(
+        { ok: false, error: "Supabase não configurado no servidor." },
+        { status: 500 }
+      );
+    }
 
-  const email = (body as Record<string, unknown>)?.email;
-  if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return badRequest('invalid or missing email');
-  }
+    const body = await req.json().catch(() => null);
 
-  try {
-    // 1) Buscar lead (somente colunas existentes no seu schema)
-    const res = await db
-      .from('leads')
-      .select('id,email,name')
-      .eq('email', email.toLowerCase())
-      .maybeSingle();
+    if (!body || typeof body !== "object") {
+      return jsonResponse(
+        { ok: false, error: "Body inválido. Envie um JSON." },
+        { status: 400 }
+      );
+    }
 
-    if (res.error) throw res.error;
+    let { email, leadId } = body as {
+      email?: string;
+      leadId?: string;
+    };
 
-    const pending = (res.data ?? null) as Partial<LeadRow> | null;
+    if (!email && !leadId) {
+      return jsonResponse(
+        {
+          ok: false,
+          error: "Informe ao menos email ou leadId.",
+        },
+        { status: 400 }
+      );
+    }
 
-    // 2) Gerar token (MVP; persistiremos abaixo)
-    const token = crypto.randomUUID();
+    let query = supabase.from("leads").select("*").limit(1);
 
-    const targetEmail = (pending?.email as string | undefined) ?? email;
-    const targetName = (pending?.name as string | null | undefined) ?? '';
-    const leadId = (pending?.id as string | undefined) ?? null;
-
-    // 3) Persistir token em email_tokens (com ou sem lead_id)
-    let tokenSaved = false;
-    let tokenSaveError: unknown = null;
-
-    // 3.1) Apaga tokens anteriores do mesmo lead (se houver) para type=confirm
     if (leadId) {
-      const del = await db
-        .from('email_tokens')
-        .delete()
-        .eq('lead_id', leadId)
-        .eq('type', 'confirm');
-      if (del.error) {
-        console.error('[tokens] delete error:', serializeError(del.error));
-      }
+      query = query.eq("id", leadId);
+    } else if (email) {
+      const normalizedEmail = email.toString().trim().toLowerCase();
+      query = query.eq("email", normalizedEmail);
     }
 
-    // 3.2) Insere o token novo
-    const insPayload: Record<string, unknown> = { token, type: 'confirm' };
-    if (leadId) insPayload.lead_id = leadId;
+    const { data: lead, error } = await query.single();
 
-    const insTok = await db.from('email_tokens').insert(insPayload as any);
-    if (insTok.error) {
-      tokenSaveError = serializeError(insTok.error);
-      console.error('[tokens] insert error:', tokenSaveError);
-    } else {
-      tokenSaved = true;
-      console.log('[tokens] insert ok:', { leadId, hasLead: Boolean(leadId) });
+    if (error || !lead) {
+      console.error(
+        "[/api/lead/resend-confirmation] Lead não encontrado:",
+        error
+      );
+      return jsonResponse(
+        {
+          ok: false,
+          error: "LEAD_NOT_FOUND",
+        },
+        { status: 404 }
+      );
     }
 
-    // 4) Enviar e-mail
-    await sendConfirmationEmail({
-      name: targetName,
-      email: targetEmail,
-      token,
+    // Se já confirmado, não faz sentido reenviar
+    if (lead.confirmation_confirmed_at || lead.confirmed_at) {
+      return jsonResponse(
+        {
+          ok: false,
+          error: "LEAD_ALREADY_CONFIRMED",
+        },
+        { status: 400 }
+      );
+    }
+
+    const newToken = crypto.randomUUID();
+    const expiresInHours = 24;
+    const newExpiresAt = new Date(
+      Date.now() + expiresInHours * 60 * 60 * 1000
+    ).toISOString();
+
+    const { error: updateError } = await supabase
+      .from("leads")
+      .update({
+        confirmation_token: newToken,
+        confirmation_expires_at: newExpiresAt,
+      })
+      .eq("id", lead.id);
+
+    if (updateError) {
+      console.error(
+        "[/api/lead/resend-confirmation] Erro ao atualizar lead:",
+        updateError
+      );
+      return jsonResponse(
+        {
+          ok: false,
+          error: "Erro ao atualizar dados de confirmação.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const emailResult = await sendLeadConfirmationEmail({
+      email: lead.email,
+      name: lead.name,
+      token: newToken,
     });
 
-    // 5) Log de evento (não-fatal)
-    const emailEvent: EmailEventInsert = {
-      email: targetEmail,
-      type: 'resend_confirmation',
-      meta: { route: 'resend-confirmation' },
-    };
-    const ins = await db.from('email_events').insert(emailEvent as any);
-    if (ins.error) {
-      console.error('[email_events] insert error:', serializeError(ins.error));
-    }
-
-    // 6) Diagnóstico: host do Supabase e leitura do token recém-inserido
-    const supabaseHost = (() => {
-      try { return new URL(process.env.SUPABASE_URL || '').host; } catch { return ''; }
-    })();
-
-    const check = await db
-      .from('email_tokens')
-      .select('id, lead_id, token, type, created_at, expires_at')
-      .eq('token', token)
-      .maybeSingle();
-
-    return NextResponse.json(
-      {
-        ok: true,
-        email: targetEmail,
-        leadId,
-        token,
-        tokenSaved,
-        tokenSaveError,
-        supabaseHost,
-        justInserted: check.data ?? null,
-        checkError: check.error ? serializeError(check.error) : null,
-      },
-      { status: 200 }
+    return jsonResponse({
+      ok: true,
+      leadId: lead.id,
+      email: lead.email,
+      name: lead.name,
+      confirmation_expires_at: newExpiresAt,
+      emailStatus: emailResult.status,
+      emailError: emailResult.error,
+    });
+  } catch (err) {
+    console.error(
+      "[/api/lead/resend-confirmation] Erro inesperado:",
+      err
     );
-  } catch (err: unknown) {
-    const payload = serializeError(err);
-    console.error('POST /api/resend-confirmation error:', payload);
-    return NextResponse.json({ ok: false, error: payload }, { status: 500 });
+    return jsonResponse(
+      { ok: false, error: "Erro interno ao reenviar confirmação." },
+      { status: 500 }
+    );
   }
 }
