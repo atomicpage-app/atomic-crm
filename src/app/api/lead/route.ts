@@ -1,240 +1,232 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error("Supabase env vars are missing");
+  throw new Error('Missing Supabase environment variables');
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
-});
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 const ALLOWED_ORIGINS = [
-  "https://atomicpage.com.br",
-  "https://www.atomicpage.com.br",
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-  "null", // origin do file:// em alguns browsers
+  'https://atomicpage.com.br',
+  'https://www.atomicpage.com.br',
+  'http://localhost:5500',
+  'http://127.0.0.1:5500',
+  'http://localhost:3000'
 ];
 
-function getOrigin(req: NextRequest): string | null {
-  return req.headers.get("origin");
-}
+function buildCorsHeaders(origin: string | null): HeadersInit {
+  const isAllowed = origin && ALLOWED_ORIGINS.includes(origin);
+  const resolvedOrigin = isAllowed ? origin! : ALLOWED_ORIGINS[0];
 
-function buildCorsHeaders(origin: string | null) {
-  const headers = new Headers();
-
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
-    headers.set("Access-Control-Allow-Origin", origin);
-  } else {
-    // fallback seguro
-    headers.set("Access-Control-Allow-Origin", "https://atomicpage.com.br");
-  }
-
-  headers.set(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Accept, Origin, X-Requested-With"
-  );
-  headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-  headers.set("Access-Control-Allow-Credentials", "true");
-
-  return headers;
-}
-
-function jsonWithCors(
-  origin: string | null,
-  body: unknown,
-  init?: number | ResponseInit
-) {
-  const response =
-    typeof init === "number"
-      ? new NextResponse(JSON.stringify(body), {
-          status: init,
-          headers: { "Content-Type": "application/json" },
-        })
-      : new NextResponse(JSON.stringify(body), {
-          ...(init || {}),
-          headers: {
-            "Content-Type": "application/json",
-            ...(init && "headers" in init ? (init as any).headers : {}),
-          },
-        });
-
-  const headers = buildCorsHeaders(origin);
-  headers.forEach((value, key) => {
-    response.headers.set(key, value);
-  });
-
-  return response;
-}
-
-export async function OPTIONS(req: NextRequest) {
-  const origin = getOrigin(req);
-  const headers = buildCorsHeaders(origin);
-  return new NextResponse(null, { status: 204, headers });
+  return {
+    'Access-Control-Allow-Origin': resolvedOrigin,
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Credentials': 'true',
+    Vary: 'Origin'
+  };
 }
 
 type LeadInsertPayload = {
   name: string;
   email: string;
   phone: string;
-  utm_source?: string;
-  utm_medium?: string;
-  utm_campaign?: string;
-  utm_term?: string;
-  utm_content?: string;
-  origin_page?: string;
-  origin_referrer?: string;
-  lgpd_consent?: boolean;
-  lgpd_consent_version?: string;
 };
 
-export async function POST(req: NextRequest) {
-  const origin = getOrigin(req);
+function sanitizeLeadPayload(body: any): LeadInsertPayload {
+  if (!body || typeof body !== 'object') {
+    throw new Error('INVALID_BODY');
+  }
+
+  const name = String(body.name || '').trim();
+  const email = String(body.email || '').trim().toLowerCase();
+  const phone = String(body.phone || '').trim();
+
+  if (!name || !email || !phone) {
+    throw new Error('MISSING_REQUIRED_FIELDS');
+  }
+
+  return { name, email, phone };
+}
+
+export async function OPTIONS(request: Request) {
+  const origin = request.headers.get('origin');
+  const corsHeaders = buildCorsHeaders(origin);
+
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders
+  });
+}
+
+export async function POST(request: Request) {
+  const origin = request.headers.get('origin');
+  const corsHeaders = buildCorsHeaders(origin);
 
   try {
-    const body = (await req.json().catch(() => null)) as LeadInsertPayload | null;
+    const body = await request.json().catch(() => null);
 
     if (!body) {
-      return jsonWithCors(origin, { ok: false, error: "INVALID_JSON" }, 400);
-    }
-
-    const {
-      name,
-      email,
-      phone,
-      utm_source,
-      utm_medium,
-      utm_campaign,
-      utm_term,
-      utm_content,
-      origin_page,
-      origin_referrer,
-      lgpd_consent,
-      lgpd_consent_version,
-    } = body;
-
-    // validações mínimas
-    if (!name || !email || !phone) {
-      return jsonWithCors(
-        origin,
-        { ok: false, error: "MISSING_REQUIRED_FIELDS" },
-        400
+      return new Response(
+        JSON.stringify({ ok: false, error: 'INVALID_JSON' }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
       );
     }
 
-    if (!lgpd_consent) {
-      return jsonWithCors(origin, { ok: false, error: "LGPD_NOT_ACCEPTED" }, 400);
-    }
+    const payload = sanitizeLeadPayload(body);
 
-    const normalizedEmail = email.trim().toLowerCase();
-    const cleanPhone = phone.replace(/\D/g, "");
-
-    console.log("[POST /api/lead] incoming payload", {
-      name,
-      normalizedEmail,
-      cleanPhone,
-      utm_source,
-      utm_medium,
-      utm_campaign,
-      utm_term,
-      utm_content,
-      origin_page,
-      origin_referrer,
-      lgpd_consent,
-      lgpd_consent_version,
-    });
-
-    // verifica lead existente por e-mail
-    const {
-      data: existing,
-      error: existingError,
-    } = await supabase
-      .from("leads")
-      .select("*")
-      .eq("email", normalizedEmail)
-      .order("created_at", { ascending: false })
-      .limit(1)
+    const { data: existing, error: selectError } = await supabase
+      .from('leads')
+      .select('id, confirmed_at')
+      .eq('email', payload.email)
       .maybeSingle();
 
-    if (existingError) {
-      console.error("[POST /api/lead] error fetching existing lead", existingError);
-      return jsonWithCors(origin, { ok: false, error: "DB_SELECT_ERROR" }, 500);
+    if (selectError) {
+      console.error('Supabase select error on /api/lead', selectError);
     }
 
-    if (existing && (existing as any).confirmed_at) {
-      console.log("[POST /api/lead] lead already confirmed", {
-        id: existing.id,
-        email: existing.email,
-      });
-      return jsonWithCors(
-        origin,
-        { ok: false, error: "LEAD_ALREADY_CONFIRMED" },
-        409
+    if (existing && existing.confirmed_at) {
+      return new Response(
+        JSON.stringify({ ok: false, error: 'LEAD_ALREADY_CONFIRMED' }),
+        {
+          status: 409,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
       );
     }
 
-    const confirmationToken = crypto.randomUUID();
-
-    const payloadToSave: any = {
-      name,
-      email: normalizedEmail,
-      phone: cleanPhone,
-      utm_source,
-      utm_medium,
-      utm_campaign,
-      utm_term,
-      utm_content,
-      origin_page,
-      origin_referrer,
-      lgpd_consent,
-      lgpd_consent_version,
-      confirmation_token: confirmationToken,
-      status: "pending",
-    };
-
-    let upsertResult;
+    let dbResult;
 
     if (existing) {
-      console.log("[POST /api/lead] updating existing pending lead", {
-        id: existing.id,
-      });
-      upsertResult = await supabase
-        .from("leads")
-        .update(payloadToSave)
-        .eq("id", existing.id)
-        .select("id")
+      dbResult = await supabase
+        .from('leads')
+        .update({
+          name: payload.name,
+          phone: payload.phone
+        })
+        .eq('id', existing.id)
+        .select('id')
         .single();
     } else {
-      console.log("[POST /api/lead] inserting new lead");
-      upsertResult = await supabase
-        .from("leads")
-        .insert(payloadToSave)
-        .select("id")
+      dbResult = await supabase
+        .from('leads')
+        .insert({
+          name: payload.name,
+          email: payload.email,
+          phone: payload.phone
+        })
+        .select('id')
         .single();
     }
 
-    const { data: leadRow, error: upsertError } = upsertResult;
+    const { data, error } = dbResult;
 
-    if (upsertError || !leadRow) {
-      console.error("[POST /api/lead] error inserting/updating lead", upsertError);
-      return jsonWithCors(origin, { ok: false, error: "DB_UPSERT_ERROR" }, 500);
+    if (error || !data) {
+      console.error('Supabase insert/update error on /api/lead', error);
+      return new Response(
+        JSON.stringify({ ok: false, error: 'DB_SAVE_ERROR' }),
+        {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
     }
 
-    console.log("[POST /api/lead] lead saved successfully", {
-      id: leadRow.id,
-      email: normalizedEmail,
-    });
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        leadId: data.id
+      }),
+      {
+        status: existing ? 200 : 201,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+  } catch (err: any) {
+    console.error('Unexpected error in /api/lead POST', err);
 
-    // aqui você faz o mesmo envio de e-mail de confirmação que já existia antes
-    // (mantendo sua lógica atual de token/confirm)
+    let errorCode = 'UNEXPECTED_ERROR';
+    let status = 500;
 
-    return jsonWithCors(origin, { ok: true, leadId: leadRow.id }, 201);
-  } catch (error) {
-    console.error("[POST /api/lead] unhandled error", error);
-    return jsonWithCors(origin, { ok: false, error: "INTERNAL_ERROR" }, 500);
+    if (err instanceof Error) {
+      if (err.message === 'MISSING_REQUIRED_FIELDS') {
+        errorCode = 'MISSING_REQUIRED_FIELDS';
+        status = 400;
+      } else if (err.message === 'INVALID_BODY') {
+        errorCode = 'INVALID_BODY';
+        status = 400;
+      }
+    }
+
+    return new Response(
+      JSON.stringify({ ok: false, error: errorCode }),
+      {
+        status,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
   }
+}
+
+export async function GET(request: Request) {
+  const origin = request.headers.get('origin');
+  const corsHeaders = buildCorsHeaders(origin);
+
+  const { searchParams } = new URL(request.url);
+  const limit = Number(searchParams.get('limit') ?? '100');
+
+  const { data, error } = await supabase
+    .from('leads')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Supabase error on /api/lead GET', error);
+    return new Response(
+      JSON.stringify({ ok: false, error: 'DB_FETCH_ERROR' }),
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+  }
+
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      leads: data
+    }),
+    {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
 }
