@@ -1,0 +1,1429 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Maven+Pro:wght@400..900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link rel="icon" type="image/jpg" href="src/images/favico_atomicpage.jpg" />
+
+  <title>AtomicPage - Seu site fácil e rápido</title>
+
+  <style>
+    @layer base {
+      html {
+        font-family: 'Maven Pro', ui-sans-serif, system-ui, sans-serif;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-white">
+    <!-- ===== CABEÇALHO E NAVEGAÇÃO ===== -->
+    <header class="absolute inset-x-0 top-0 z-50">
+      <!-- Barra de Navegação Principal -->
+      <nav aria-label="Global" class="flex items-center justify-between p-6 lg:px-8">
+        <!-- Logo da Empresa -->
+        <div class="flex lg:flex-1">
+          <a href="#" class="-m-1.5 p-1.5">
+            <span class="sr-only">AtomicPage - Seu site fácil</span>
+            <img src="src/images/Logo_AtomicPage.png" alt="" class="h-12 w-auto" />
+          </a>
+        </div>
+
+        <!-- Botão Menu Mobile -->
+        <div class="flex lg:hidden">
+          <button type="button" command="show-modal" commandfor="mobile-menu"
+            class="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700">
+            <span class="sr-only">Abrir menu</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon"
+              aria-hidden="true" class="size-6">
+              <path d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Menu de Navegação Desktop -->
+        <div class="hidden lg:flex lg:gap-x-12">
+          <a href="#" class="text-sm/6 font-semibold text-gray-900">Benefícios</a>
+          <a href="#" class="text-sm/6 font-semibold text-gray-900">Recursos</a>
+          <a href="#" class="text-sm/6 font-semibold text-gray-900">Preços</a>
+          <a href="#" class="text-sm/6 font-semibold text-gray-900">Como funciona</a>
+        </div>
+
+        <!-- Botão Login Desktop -->
+        <div class="hidden lg:flex lg:flex-1 lg:justify-end">
+          <a href="#" class="text-sm/6 font-semibold text-gray-900">Entrar <span aria-hidden="true">&rarr;</span></a>
+        </div>
+      </nav>
+
+      <!-- ===== MENU MOBILE (MODAL) ===== -->
+      <el-dialog>
+        <dialog id="mobile-menu" class="backdrop:bg-transparent lg:hidden">
+          <div tabindex="0" class="fixed inset-0 focus:outline-none">
+            <el-dialog-panel
+              class="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-white p-6 sm:max-w-sm sm:ring-1 sm:ring-gray-900/10">
+              <!-- Cabeçalho do Menu Mobile -->
+              <div class="flex items-center justify-between">
+                <a href="#" class="-m-1.5 p-1.5">
+                  <span class="sr-only">AtomicPage</span>
+                  <img src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600" alt=""
+                    class="h-8 w-auto" />
+                </a>
+                <button type="button" command="close" commandfor="mobile-menu"
+                  class="-m-2.5 rounded-md p-2.5 text-gray-700">
+                  <span class="sr-only">Fechar</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon"
+                    aria-hidden="true" class="size-6">
+                    <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Links do Menu Mobile -->
+              <div class="mt-6 flow-root">
+                <div class="-my-6 divide-y divide-gray-500/10">
+                  <div class="space-y-2 py-6">
+                    <a href="#"
+                      class="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-gray-900 hover:bg-gray-50">Benefícios</a>
+                    <a href="#"
+                      class="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-gray-900 hover:bg-gray-50">Recursos</a>
+                    <a href="#"
+                      class="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-gray-900 hover:bg-gray-50">Preços</a>
+                    <a href="#"
+                      class="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-gray-900 hover:bg-gray-50">Como
+                      funciona</a>
+                  </div>
+                  <div class="py-6">
+                    <a href="#"
+                      class="-mx-3 block rounded-lg px-3 py-2.5 text-base/7 font-semibold text-gray-900 hover:bg-gray-50">Log
+                      in</a>
+                  </div>
+                </div>
+              </div>
+            </el-dialog-panel>
+          </div>
+        </dialog>
+      </el-dialog>
+    </header>
+
+    <!-- ===== SEÇÃO HERO (PRINCIPAL) ===== -->
+    <div class="relative isolate px-6 pt-10 lg:px-8">
+      <!-- Efeito de Fundo Superior (Gradiente) -->
+      <div aria-hidden="true"
+        class="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80">
+        <div
+          style="clip-path: polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)"
+          class="relative left-[calc(50%-11rem)] aspect-1155/678 w-144.5 -translate-x-1/2 rotate-30 bg-linear-to-tr from-[#ff80b5] to-[#9089fc] opacity-30 sm:left-[calc(50%-30rem)] sm:w-288.75">
+        </div>
+      </div>
+
+      <!-- Conteúdo Principal da Hero -->
+      <div class="mx-auto max-w-6xl py-32 sm:py-48 lg:py-32">
+        <div class="text-center">
+          <!-- Título Principal -->
+          <h1 class="text-5xl font-bold tracking-tight text-balance text-blue-900 sm:text-7xl">
+            Crie um site profissional e divulgue seu negócio em minutos
+          </h1>
+
+          <!-- Descrição/Subtítulo -->
+          <p class="mt-8 text-lg font-small text-pretty text-gray-500 sm:text-xl/8 max-w-3xl mx-auto">
+            Publique um site funcional e atraente, mesmo que você não tenha conhecimento técnico, de forma rápida e
+            sem recorrer a desenvolvedores ou agências.
+          </p>
+
+          <!-- Botão de Ação -->
+          <div class="mt-10 flex items-center justify-center gap-x-6">
+            <a href="#"
+              class="rounded-lg bg-pink-500 px-20 py-4 text-lg font-semibold text-white shadow-xs hover:bg-pink-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sp_popup_db4afa35-8016-46e1-b5db-e4079bfb51b2">
+              Criar meu site AGORA
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Efeito de Fundo Inferior (Gradiente) -->
+      <div aria-hidden="true"
+        class="absolute inset-x-0 top-[calc(100%-13rem)] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[calc(100%-30rem)]">
+        <div
+          style="clip-path: polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)"
+          class="relative left-[calc(50%+3rem)] aspect-1155/678 w-144.5 -translate-x-1/2 bg-linear-to-tr from-[#ff80b5] to-[#9089fc] opacity-30 sm:left-[calc(50%+36rem)] sm:w-288.75">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SEÇÃO DE IMAGEM DO SISTEMA ===== -->
+  <div class="sm:py-0 lg:py-0 py-0">
+    <div class="mx-auto max-w-7xl px-0">
+      <div class="mx-auto max-w-4xl px-0">
+        <div class="relative overflow-hidden rounded-xl shadow-2xl">
+          <img src="src/images/exemplo_site_atomicpage.png" alt="Imagem exemplo de um site"
+            class="w-full h-auto object-cover" />
+          <div class="absolute inset-0 ring-1 ring-inset ring-gray-900/10 rounded-xl"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SEÇÃO DE RECURSOS/FEATURES ===== -->
+  <div class="bg-white lg:py-48 py-24 sm:py-32">
+    <div class="mx-auto max-w-7xl px-6 lg:px-8">
+      <div class="mx-auto max-w-2xl lg:text-center">
+        <h2 class="text-base/7 font-light uppercase text-blue-800">Facilidade e rapidez</h2>
+        <p
+          class="mt-2 text-4xl font-bold tracking-tight text-pretty text-gray-800 sm:text-5xl lg:text-balance lg:whitespace-nowrap">
+          O que a AtomicPage faz pra você
+        </p>
+      </div>
+
+      <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-6xl">
+        <dl class="grid max-w-xl grid-cols-1 gap-x-12 gap-y-10 lg:max-w-none lg:grid-cols-4 lg:gap-y-16">
+          <!-- Feature 1 -->
+          <div class="text-left">
+            <dt class="text-lg/6 font-semibold text-gray-700">
+              <div class="mb-4 flex size-12 items-center justify-center rounded-lg bg-gray-200">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#7775D6" stroke-width="1.8" data-slot="icon"
+                  aria-hidden="true" class="size-8 text-white">
+                  <path
+                    d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"
+                    stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              Criação automática de página
+            </dt>
+            <dd class="mt-2 text-base/7 text-gray-600">
+              Basta preencher um formulário simples com as informações do seu negócio e seu site é gerado
+              automaticamente.
+            </dd>
+          </div>
+
+          <!-- Feature 2 -->
+          <div class="text-left">
+            <dt class="text-lg/6 font-semibold text-gray-700">
+              <div class="mb-4 flex size-12 items-center justify-center rounded-lg bg-gray-200">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#7775D6" stroke-width="1.5" data-slot="icon"
+                  aria-hidden="true" class="size-8 text-white">
+                  <path
+                    d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
+                    stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              Publicação instantânea do seu site
+            </dt>
+            <dd class="mt-2 text-base/7 text-gray-600">
+              Seu site vai ao ar em instantes, pronto para ser divulgado e compartilhado.
+            </dd>
+          </div>
+
+          <!-- Feature 3 -->
+          <div class="text-left">
+            <dt class="text-lg/6 font-semibold text-gray-700">
+              <div class="mb-4 flex size-12 items-center justify-center rounded-lg bg-gray-200">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#7775D6" stroke-width="1.5" data-slot="icon"
+                  aria-hidden="true" class="size-8 text-white">
+                  <path
+                    d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
+                    stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              Apresentação de produtos sem complexidade
+            </dt>
+            <dd class="mt-2 text-base/7 text-gray-600">
+              Destaque os seus produtos e serviços de forma clara, organizada e pronta para atrair clientes.
+            </dd>
+          </div>
+
+          <!-- Feature 4 -->
+          <div class="text-left">
+            <dt class="text-lg/6 font-semibold text-gray-700">
+              <div class="mb-4 flex size-12 items-center justify-center rounded-lg bg-gray-200">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#7775D6" stroke-width="1.5" data-slot="icon"
+                  aria-hidden="true" class="size-8 text-white">
+                  <path
+                    d="M7.864 4.243A7.5 7.5 0 0 1 19.5 10.5c0 2.92-.556 5.709-1.568 8.268M5.742 6.364A7.465 7.465 0 0 0 4.5 10.5a7.464 7.464 0 0 1-1.15 3.993m1.989 3.559A11.209 11.209 0 0 0 8.25 10.5a3.75 3.75 0 1 1 7.5 0c0 .527-.021 1.049-.064 1.565M12 10.5a14.94 14.94 0 0 1-3.6 9.75m6.633-4.596a18.666 18.666 0 0 1-2.485 5.33"
+                    stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              Pronto para ver no celular (mobile)
+            </dt>
+            <dd class="mt-2 text-base/7 text-gray-600">
+              Seu site fica perfeito em celulares e tablets, garantindo acesso em qualquer dispositivo.
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="mt-24 flex items-center justify-center gap-x-6">
+      <a href="#"
+        class="rounded-lg bg-pink-600 px-20 py-4 text-lg font-semibold text-white shadow-xs hover:bg-pink-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+        Criar meu site AGORA
+      </a>
+    </div>
+  </div>
+
+  <!-- ===== SEÇÃO DE BENEFÍCIOS PARA SEU NEGÓCIO ===== -->
+  <div class="lg:py-4 py-24 sm:py-32">
+    <div class="mx-auto max-w-7xl px-6 lg:px-8">
+      <div class="mx-auto max-w-2xl lg:text-center">
+        <h2 class="text-base/7 font-light uppercase text-blue-800">Vantagens reais</h2>
+        <p
+          class="mt-2 text-4xl font-bold tracking-tight text-pretty text-gray-800 sm:text-5xl lg:text-balance lg:whitespace-nowrap">
+          Benefícios para seu negócio
+        </p>
+      </div>
+
+      <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-5xl">
+        <dl class="grid max-w-xl grid-cols-1 gap-x-12 gap-y-10 lg:max-w-none lg:grid-cols-2 lg:gap-y-16">
+          <!-- Benefício 1 -->
+          <div class="text-left bg-gray-100 border border-gray-200 rounded-lg p-8">
+            <dt class="text-lg/6 font-semibold text-gray-700">
+              <div class="mb-4 flex size-12 items-center justify-center rounded-lg bg-indigo-700">
+                <svg viewBox="0 0 24 24" fill="currentColor" data-slot="icon" aria-hidden="true"
+                  class="size-8 text-white">
+                  <path
+                    d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"
+                    stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              Economia de tempo e dinheiro
+            </dt>
+            <dd class="mt-2 text-base/7 text-gray-600">
+              Não gaste com agências ou profissionais caros: faça tudo sozinho, rapidamente.
+            </dd>
+          </div>
+
+          <!-- Benefício 2 -->
+          <div class="text-left bg-gray-100 border border-gray-200 rounded-lg p-8">
+            <dt class="text-lg/6 font-semibold text-gray-700">
+              <div class="mb-4 flex size-12 items-center justify-center rounded-lg bg-indigo-700">
+                <svg viewBox="0 0 24 24" fill="currentColor" data-slot="icon" aria-hidden="true"
+                  class="size-8 text-white">
+                  <path
+                    d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
+                    stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              Mais clientes e vendas
+            </dt>
+            <dd class="mt-2 text-base/7 text-gray-600">
+              Tenha presença digital profissional que gera credibilidade e atrai mais clientes para seu negócio.
+            </dd>
+          </div>
+
+          <!-- Benefício 3 -->
+          <div class="text-left bg-gray-100 border border-gray-200 rounded-lg p-8">
+            <dt class="text-lg/6 font-semibold text-gray-700">
+              <div class="mb-4 flex size-12 items-center justify-center rounded-lg bg-indigo-700">
+                <svg viewBox="0 0 24 24" fill="currentColor" data-slot="icon" aria-hidden="true"
+                  class="size-8 text-white">
+                  <path
+                    d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
+                    stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              Disponibilidade 24 horas
+            </dt>
+            <dd class="mt-2 text-base/7 text-gray-600">
+              Seu negócio trabalha mesmo quando você dorme. Clientes podem conhecer seus serviços a qualquer hora.
+            </dd>
+          </div>
+
+          <!-- Benefício 4 -->
+          <div class="text-left bg-gray-100 border border-gray-200 rounded-lg p-8">
+            <dt class="text-lg/6 font-semibold text-gray-700">
+              <div class="mb-4 flex size-12 items-center justify-center rounded-lg bg-indigo-700">
+                <svg viewBox="0 0 24 24" fill="currentColor" data-slot="icon" aria-hidden="true"
+                  class="size-8 text-white">
+                  <path
+                    d="M7.864 4.243A7.5 7.5 0 0 1 19.5 10.5c0 2.92-.556 5.709-1.568 8.268M5.742 6.364A7.465 7.465 0 0 0 4.5 10.5a7.464 7.464 0 0 1-1.15 3.993m1.989 3.559A11.209 11.209 0 0 0 8.25 10.5a3.75 3.75 0 1 1 7.5 0c0 .527-.021 1.049-.064 1.565M12 10.5a14.94 14.94 0 0 1-3.6 9.75m6.633-4.596a18.666 18.666 0 0 1-2.485 5.33"
+                    stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              Mais oportunidades de negócio
+            </dt>
+            <dd class="mt-2 text-base/7 text-gray-600">
+              Aumente as possibilidades de negócios com uma presença online forte e atraente.
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="mt-24 flex items-center justify-center gap-x-6">
+      <a href="#"
+        class="rounded-lg bg-pink-600 px-20 py-4 text-lg font-semibold text-white shadow-xs hover:bg-pink-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+        Criar meu site AGORA
+      </a>
+    </div>
+  </div>
+
+  <!-- ===== SEÇÃO COMO FUNCIONA ===== -->
+  <div class="overflow-hidden bg-white py-24 sm:py-32">
+    <div class="mx-auto max-w-7xl px-6 lg:px-8">
+      <div class="mx-auto grid max-w-2xl grid-cols-1 gap-x-8 gap-y-16 sm:gap-y-20 lg:mx-0 lg:max-w-none lg:grid-cols-2">
+        <div class="lg:pt-4 lg:pr-8">
+          <div class="lg:max-w-lg">
+            <h2 class="text-base/7 font-semibold text-blue-800">Processo simples</h2>
+            <p class="mt-2 text-4xl font-semibold tracking-tight text-pretty text-gray-900 sm:text-5xl">
+              Como funciona a AtomicPage
+            </p>
+            <p class="mt-6 text-lg/8 text-gray-700">
+              Criar seu site profissional nunca foi tão fácil. Em apenas 5 passos simples, você tem um site completo e
+              no ar.
+            </p>
+
+            <dl class="mt-10 max-w-xl space-y-8 text-base/7 text-gray-600 lg:max-w-none">
+              <div class="relative pl-9">
+                <dt class="inline font-semibold text-gray-900">
+                  <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true"
+                    class="absolute top-1 left-1 size-5 text-blue-600">
+                    <path
+                      d="M5.5 17a4.5 4.5 0 0 1-1.44-8.765 4.5 4.5 0 0 1 8.302-3.046 3.5 3.5 0 0 1 4.504 4.272A4 4 0 0 1 15 17H5.5Zm3.75-2.75a.75.75 0 0 0 1.5 0V9.66l1.95 2.1a.75.75 0 1 0 1.1-1.02l-3.25-3.5a.75.75 0 0 0-1.1 0l-3.25 3.5a.75.75 0 1 0 1.1 1.02l1.95-2.1v4.59Z"
+                      clip-rule="evenodd" fill-rule="evenodd" />
+                  </svg>
+                  1. Crie sua conta e cadastre o seu perfil.
+                </dt>
+              </div>
+
+              <div class="relative pl-9">
+                <dt class="inline font-semibold text-gray-900">
+                  <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true"
+                    class="absolute top-1 left-1 size-5 text-blue-600">
+                    <path
+                      d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z"
+                      clip-rule="evenodd" fill-rule="evenodd" />
+                  </svg>
+                  2. Preencha as informações do seu negócio.
+                </dt>
+              </div>
+
+              <div class="relative pl-9">
+                <dt class="inline font-semibold text-gray-900">
+                  <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true"
+                    class="absolute top-1 left-1 size-5 text-blue-600">
+                    <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+                    <path
+                      d="M10 3C5.5 3 2 7 2 10s3.5 7 8 7 8-4 8-7-3.5-7-8-7Zm0 11c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4Z"
+                      fill-rule="evenodd" clip-rule="evenodd" />
+                  </svg>
+                  3. Descreva as informações de seus produtos e serviços.
+                </dt>
+              </div>
+
+              <div class="relative pl-9">
+                <dt class="inline font-semibold text-gray-900">
+                  <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true"
+                    class="absolute top-1 left-1 size-5 text-blue-600">
+                    <path
+                      d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
+                    <path d="M5.5 5.5l3 3" />
+                  </svg>
+                  4. Conecte suas redes sociais, e-mail e telefone.
+                </dt>
+              </div>
+
+              <div class="relative pl-9">
+                <dt class="inline font-semibold text-gray-900">
+                  <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true"
+                    class="absolute top-1 left-1 size-5 text-blue-600">
+                    <path
+                      d="M3.105 2.289a.75.75 0 0 0-.826.95l1.414 4.926A1.5 1.5 0 0 0 5.135 9.25h6.115a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.086l-1.414 4.926a.75.75 0 0 0 .826.95 28.897 28.897 0 0 0 15.293-7.155.75.75 0 0 0 0-1.114A28.897 28.897 0 0 0 3.105 2.289Z" />
+                  </svg>
+                  5. Publique e comece a divulgar e compartilhar.
+                </dt>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        <img width="2432" height="1442" src="src/images/exemplo_site_atomicpage.png"
+          alt="Interface da AtomicPage mostrando processo de criação"
+          class="w-3xl max-w-none rounded-xl shadow-xl ring-1 ring-gray-400/10 sm:w-228 md:-ml-4 lg:-ml-0" />
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SEÇÃO PARA QUEM É / PARA QUEM NÃO É ===== -->
+  <div class="bg-gray-50 lg:py-32 py-24 sm:py-32">
+    <div class="mx-auto max-w-7xl px-6 lg:px-8">
+      <div class="mx-auto max-w-2xl lg:text-center">
+        <h2 class="text-base/7 font-light uppercase text-blue-800">Indicação de uso</h2>
+        <p class="mt-2 text-2xl font-bold tracking-tight text-pretty text-gray-800 sm:text-5xl lg:text-balance">
+          Para quem é/Para quem não é
+        </p>
+      </div>
+
+      <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-5xl">
+        <dl class="grid max-w-xl grid-cols-1 gap-x-12 gap-y-10 lg:max-w-none lg:grid-cols-2 lg:gap-y-16">
+          <!-- Para quem é -->
+          <div class="text-left bg-gray-100 border border-gray-200 rounded-lg p-8">
+            <dt class="text-2xl font-semibold text-gray-700">
+              Para quem é
+            </dt>
+            <h3 class="mt-2 text-base font-medium text-gray-700">Empreendedores:</h3>
+            <dd class="mt-8 text-base/7 text-gray-700">
+              <ul class="list-disc list-inside space-y-1">
+                <li>Profissionais autônomos</li>
+                <li>Pequenos negócios</li>
+                <li>Microempreendedores individuais</li>
+                <li>Freelancers</li>
+              </ul>
+            </dd>
+          </div>
+
+          <!-- Para quem não é -->
+          <div class="text-left bg-gray-100 border border-gray-200 rounded-lg p-8">
+            <dt class="text-2xl font-semibold text-gray-700">
+              Para quem não é
+            </dt>
+            <h3 class="mt-2 text-base font-medium text-gray-700">Médias e grandes empresas:</h3>
+            <dd class="mt-8 text-base/7 text-gray-700">
+              <ul class="list-disc list-inside space-y-1">
+                <li>Negócios de médio e grande porte</li>
+                <li>Grandes empresas</li>
+                <li>E-commerces</li>
+                <li>Negócios que demandam soluções complexas</li>
+              </ul>
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="mt-24 flex items-center justify-center gap-x-6">
+      <a href="#"
+        class="rounded-lg bg-pink-600 px-20 py-4 text-lg font-semibold text-white shadow-xs hover:bg-pink-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+        Criar meu site AGORA
+      </a>
+    </div>
+  </div>
+
+  <!-- ===== SEÇÃO DE PREÇOS ===== -->
+  <div class="relative isolate bg-white px-6 py-24 sm:py-32 lg:px-8">
+    <div aria-hidden="true" class="absolute inset-x-0 -top-3 -z-10 transform-gpu overflow-hidden px-36 blur-3xl">
+      <div
+        style="clip-path: polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)"
+        class="mx-auto aspect-1155/678 w-288.75 bg-linear-to-tr from-[#ff80b5] to-[#9089fc] opacity-30"></div>
+    </div>
+
+    <div class="mx-auto max-w-4xl text-center">
+      <h2 class="text-base/7 font-semibold text-blue-800">Preços</h2>
+      <p class="mt-2 text-5xl font-semibold tracking-tight text-balance text-gray-900 sm:text-6xl">
+        Escolha o plano ideal para você
+      </p>
+    </div>
+
+    <p class="mx-auto mt-6 max-w-2xl text-center text-lg font-medium text-pretty text-gray-600 sm:text-xl/8">
+      Escolha um plano acessível com os melhores recursos para engajar seu público, criar fidelidade e aumentar suas
+      vendas.
+    </p>
+
+    <div
+      class="mx-auto mt-16 grid max-w-lg grid-cols-1 items-center gap-y-6 sm:mt-20 sm:gap-y-0 lg:max-w-4xl lg:grid-cols-2">
+      <!-- Plano Básico -->
+      <div
+        class="rounded-3xl rounded-t-3xl bg-white/60 p-8 ring-1 ring-gray-900/10 sm:mx-8 sm:rounded-b-none sm:p-10 lg:mx-0 lg:rounded-tr-none lg:rounded-bl-3xl">
+        <h3 id="tier-basico" class="text-base/7 font-semibold text-blue-600">Básico</h3>
+
+        <p class="mt-4 flex items-baseline gap-x-2">
+          <span class="text-2xl font-semibold tracking-tight text-gray-700">Gratuito</span>
+          <span class="text-base text-gray-500">/mês</span>
+        </p>
+
+        <p class="mt-6 text-l font-regular text-gray-700">
+          O plano perfeito se você está começando com seu primeiro site.
+        </p>
+
+        <ul role="list" class="mt-8 space-y-3 text-base text-gray-600 sm:mt-10">
+          <li class="flex gap-x-3">
+            <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true"
+              class="h-6 w-5 flex-none text-blue-600">
+              <path
+                d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+                clip-rule="evenodd" fill-rule="evenodd" />
+            </svg>
+            Limite de 3 produtos
+          </li>
+          <li class="flex gap-x-3">
+            <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true"
+              class="h-6 w-5 flex-none text-blue-600">
+              <path
+                d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+                clip-rule="evenodd" fill-rule="evenodd" />
+            </svg>
+            Suporte via e-mail
+          </li>
+          <li class="flex gap-x-3">
+            <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true"
+              class="h-6 w-5 flex-none text-blue-600">
+              <path
+                d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+                clip-rule="evenodd" fill-rule="evenodd" />
+            </svg>
+            Domínio atomicpage.com/seunegocio
+          </li>
+          <li class="flex gap-x-3">
+            <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true"
+              class="h-6 w-5 flex-none text-blue-600">
+              <path
+                d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+                clip-rule="evenodd" fill-rule="evenodd" />
+            </svg>
+            Estatística simples de visita
+          </li>
+        </ul>
+
+        <a href="#" aria-describedby="tier-basico"
+          class="mt-8 block rounded-md px-3.5 py-2.5 text-center text-sm font-semibold text-blue-600 inset-ring inset-ring-blue-200 hover:inset-ring-blue-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:mt-10">
+          Começar agora
+        </a>
+      </div>
+
+      <!-- Plano Premium -->
+      <div class="relative rounded-3xl bg-gray-800 p-8 shadow-2xl ring-1 ring-gray-900/10 sm:p-10">
+        <h3 id="tier-premium" class="text-base/7 font-semibold text-pink-400">Premium</h3>
+
+        <p class="mt-4 flex items-baseline gap-x-2">
+          <span class="text-5xl font-semibold tracking-tight text-white">R$ 29</span>
+          <span class="text-base text-gray-400">/mês</span>
+        </p>
+
+        <p class="mt-6 text-base/6 text-gray-300 font-bold">
+          Recursos avançados e suporte dedicado para seu negócio crescer.
+        </p>
+
+        <ul role="list" class="mt-8 space-y-3 text-base text-gray-300 sm:mt-10">
+          <li class="flex gap-x-3 font-semibold">
+            <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true"
+              class="h-6 w-5 flex-none text-pink-400">
+              <path
+                d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+                clip-rule="evenodd" fill-rule="evenodd" />
+            </svg>
+            Produtos ilimitados
+          </li>
+          <li class="flex gap-x-3 font-semibold">
+            <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true"
+              class="h-6 w-5 flex-none text-pink-400">
+              <path
+                d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+                clip-rule="evenodd" fill-rule="evenodd" />
+            </svg>
+            Suporte exclusivo
+          </li>
+          <li class="flex gap-x-3 font-semibold">
+            <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true"
+              class="h-6 w-5 flex-none text-pink-400">
+              <path
+                d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+                clip-rule="evenodd" fill-rule="evenodd" />
+            </svg>
+            Domínio personalizado
+          </li>
+          <li class="flex gap-x-3 font-semibold">
+            <svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true"
+              class="h-6 w-5 flex-none text-pink-400">
+              <path
+                d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+                clip-rule="evenodd" fill-rule="evenodd" />
+            </svg>
+            Painel de análise avançado
+          </li>
+        </ul>
+
+        <a href="#" aria-describedby="tier-premium"
+          class="mt-8 block rounded-md bg-pink-500 px-4 py-4 text-center text-sm font-semibold text-white shadow-xs hover:bg-pink-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pink-500 sm:mt-10">
+          Começar agora
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SEÇÃO FAQ ===== -->
+  <div class="bg-white lg:py-20 py-24 sm:py-32">
+    <div class="mx-auto max-w-7xl px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl text-center">
+        <h2 class="text-base/7 font-semibold text-blue-800">Dúvidas frequentes</h2>
+        <p class="mt-2 text-4xl font-bold tracking-tight text-pretty text-gray-800 sm:text-5xl lg:text-balance">
+          Perguntas Frequentes
+        </p>
+        <p class="mt-6 text-lg/8 text-gray-700">
+          Tire suas dúvidas sobre a AtomicPage e como ela pode ajudar seu negócio.
+        </p>
+      </div>
+
+      <div class="mx-auto mt-16 max-w-4xl">
+        <dl class="space-y-6 divide-y divide-gray-900/10">
+          <!-- FAQ 1 -->
+          <div class="pt-6">
+            <dt>
+              <button type="button" class="flex w-full items-start justify-between text-left text-gray-900 faq-trigger"
+                data-target="faq-1">
+                <span class="text-base/7 font-semibold">
+                  Como faço para inscrever meu negócio?
+                </span>
+                <span class="ml-6 flex h-7 items-center">
+                  <svg class="h-6 w-6 faq-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                    aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
+                  </svg>
+                </span>
+              </button>
+            </dt>
+            <dd class="mt-2 pr-12 faq-content hidden" id="faq-1">
+              <p class="text-base/7 text-gray-600">
+                É muito simples! Basta clicar no botão "Criar meu site AGORA", fazer seu cadastro com e-mail e senha, e
+                seguir o passo a passo guiado. Em poucos minutos você terá sua conta criada e poderá começar a
+                construir seu site.
+              </p>
+            </dd>
+          </div>
+
+          <!-- FAQ 2 -->
+          <div class="pt-6">
+            <dt>
+              <button type="button" class="flex w-full items-start justify-between text-left text-gray-900 faq-trigger"
+                data-target="faq-2">
+                <span class="text-base/7 font-semibold">
+                  Preciso de conhecimento técnico para criar uma conta?
+                </span>
+                <span class="ml-6 flex h-7 items-center">
+                  <svg class="h-6 w-6 faq-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                    aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
+                  </svg>
+                </span>
+              </button>
+            </dt>
+            <dd class="mt-2 pr-12 faq-content hidden" id="faq-2">
+              <p class="text-base/7 text-gray-600">
+                Não! A AtomicPage foi criada justamente para pessoas sem conhecimento técnico. Todo o processo é
+                automatizado e intuitivo - você só precisa preencher as informações do seu negócio e o sistema faz o
+                resto.
+              </p>
+            </dd>
+          </div>
+
+          <!-- FAQ 3 -->
+          <div class="pt-6">
+            <dt>
+              <button type="button" class="flex w-full items-start justify-between text-left text-gray-900 faq-trigger"
+                data-target="faq-3">
+                <span class="text-base/7 font-semibold">
+                  Quanto tempo leva para o meu site ficar pronto?
+                </span>
+                <span class="ml-6 flex h-7 items-center">
+                  <svg class="h-6 w-6 faq-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                    aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
+                  </svg>
+                </span>
+              </button>
+            </dt>
+            <dd class="mt-2 pr-12 faq-content hidden" id="faq-3">
+              <p class="text-base/7 text-gray-600">
+                Seu site fica pronto em minutos! Após preencher as informações do seu negócio, produtos e serviços, o
+                site é gerado automaticamente e você pode publicá-lo instantaneamente.
+              </p>
+            </dd>
+          </div>
+
+          <!-- FAQ 4 -->
+          <div class="pt-6">
+            <dt>
+              <button type="button" class="flex w-full items-start justify-between text-left text-gray-900 faq-trigger"
+                data-target="faq-4">
+                <span class="text-base/7 font-semibold">
+                  A AtomicPage oferece suporte?
+                </span>
+                <span class="ml-6 flex h-7 items-center">
+                  <svg class="h-6 w-6 faq-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                    aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
+                  </svg>
+                </span>
+              </button>
+            </dt>
+            <dd class="mt-2 pr-12 faq-content hidden" id="faq-4">
+              <p class="text-base/7 text-gray-600">
+                Sim! Oferecemos suporte por e-mail para todos os usuários. Usuários do plano Premium têm suporte
+                prioritário via WhatsApp, garantindo respostas mais rápidas e atendimento personalizado.
+              </p>
+            </dd>
+          </div>
+
+          <!-- FAQ 5 -->
+          <div class="pt-6">
+            <dt>
+              <button type="button" class="flex w-full items-start justify-between text-left text-gray-900 faq-trigger"
+                data-target="faq-5">
+                <span class="text-base/7 font-semibold">
+                  Posso editar meu site depois de publicado?
+                </span>
+                <span class="ml-6 flex h-7 items-center">
+                  <svg class="h-6 w-6 faq-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                    aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
+                  </svg>
+                </span>
+              </button>
+            </dt>
+            <dd class="mt-2 pr-12 faq-content hidden" id="faq-5">
+              <p class="text-base/7 text-gray-600">
+                Claro! Você pode fazer alterações nas informações do seu negócio, adicionar ou remover produtos e
+                serviços, atualizar contatos e muito mais. As mudanças são aplicadas instantaneamente no seu site.
+              </p>
+            </dd>
+          </div>
+
+          <!-- FAQ 6 -->
+          <div class="pt-6">
+            <dt>
+              <button type="button" class="flex w-full items-start justify-between text-left text-gray-900 faq-trigger"
+                data-target="faq-6">
+                <span class="text-base/7 font-semibold">
+                  Preciso pagar para utilizar meu site?
+                </span>
+                <span class="ml-6 flex h-7 items-center">
+                  <svg class="h-6 w-6 faq-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                    aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
+                  </svg>
+                </span>
+              </button>
+            </dt>
+            <dd class="mt-2 pr-12 faq-content hidden" id="faq-6">
+              <p class="text-base/7 text-gray-600">
+                Temos um plano gratuito que permite criar um site profissional com até 10 produtos/serviços. Para
+                recursos avançados como domínio personalizado, produtos ilimitados e suporte prioritário, oferecemos o
+                plano Premium por R$ 29/mês.
+              </p>
+            </dd>
+          </div>
+
+          <!-- FAQ 7 -->
+          <div class="pt-6">
+            <dt>
+              <button type="button" class="flex w-full items-start justify-between text-left text-gray-900 faq-trigger"
+                data-target="faq-7">
+                <span class="text-base/7 font-semibold">
+                  Posso usar meu próprio domínio (nome do site)?
+                </span>
+                <span class="ml-6 flex h-7 items-center">
+                  <svg class="h-6 w-6 faq-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                    aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
+                  </svg>
+                </span>
+              </button>
+            </dt>
+            <dd class="mt-2 pr-12 faq-content hidden" id="faq-7">
+              <p class="text-base/7 text-gray-600">
+                Sim! No plano Premium você pode conectar seu próprio domínio personalizado (como
+                www.seunegocio.com.br). No plano gratuito, seu site terá um subdomínio da AtomicPage.
+              </p>
+            </dd>
+          </div>
+
+          <!-- FAQ 8 -->
+          <div class="pt-6">
+            <dt>
+              <button type="button" class="flex w-full items-start justify-between text-left text-gray-900 faq-trigger"
+                data-target="faq-8">
+                <span class="text-base/7 font-semibold">
+                  Como a AtomicPage ajuda meu site a ser divulgado?
+                </span>
+                <span class="ml-6 flex h-7 items-center">
+                  <svg class="h-6 w-6 faq-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                    aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
+                  </svg>
+                </span>
+              </button>
+            </dt>
+            <dd class="mt-2 pr-12 faq-content hidden" id="faq-8">
+              <p class="text-base/7 text-gray-600">
+                Todos os sites são otimizados para mecanismos de busca (SEO) e responsivos para dispositivos móveis. No
+                plano Premium, você tem acesso a analytics avançado e integração facilitada com redes sociais para
+                aumentar sua visibilidade online.
+              </p>
+            </dd>
+          </div>
+
+          <!-- FAQ 9 -->
+          <div class="pt-6">
+            <dt>
+              <button type="button" class="flex w-full items-start justify-between text-left text-gray-900 faq-trigger"
+                data-target="faq-9">
+                <span class="text-base/7 font-semibold">
+                  A AtomicPage é adequada para todos os tipos de negócios?
+                </span>
+                <span class="ml-6 flex h-7 items-center">
+                  <svg class="h-6 w-6 faq-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                    aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
+                  </svg>
+                </span>
+              </button>
+            </dt>
+            <dd class="mt-2 pr-12 faq-content hidden" id="faq-9">
+              <p class="text-base/7 text-gray-600">
+                A AtomicPage é ideal para profissionais autônomos, pequenos negócios, microempreendedores individuais e
+                freelancers. Não é recomendada para grandes empresas ou e-commerces que precisam de funcionalidades
+                muito complexas.
+              </p>
+            </dd>
+          </div>
+
+          <!-- FAQ 10 -->
+          <div class="pt-6">
+            <dt>
+              <button type="button" class="flex w-full items-start justify-between text-left text-gray-900 faq-trigger"
+                data-target="faq-10">
+                <span class="text-base/7 font-semibold">
+                  O que acontece se eu precisar de funcionalidades que não existem hoje?
+                </span>
+                <span class="ml-6 flex h-7 items-center">
+                  <svg class="h-6 w-6 faq-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                    aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
+                  </svg>
+                </span>
+              </button>
+            </dt>
+            <dd class="mt-2 pr-12 faq-content hidden" id="faq-10">
+              <p class="text-base/7 text-gray-600">
+                Estamos sempre evoluindo! Entre em contato conosco através do suporte para sugerir novas
+                funcionalidades. Analisamos todas as sugestões e priorizamos aquelas que beneficiam a maioria dos
+                nossos usuários.
+              </p>
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SEÇÃO CTA FINAL ===== -->
+  <div class="bg-white py-4">
+    <div class="mx-auto max-w-7xl px-6 sm:px-6 lg:px-8">
+      <div
+        class="relative isolate overflow-hidden bg-gray-900 px-6 py-16 shadow-2xl sm:rounded-3xl sm:px-16 md:py-24 lg:flex lg:gap-x-20 lg:px-24 lg:py-20">
+        <svg viewBox="0 0 1024 1024" aria-hidden="true"
+          class="absolute top-1/2 left-1/2 -z-10 size-256 -translate-y-1/2 mask-[radial-gradient(closest-side,white,transparent)] sm:left-full sm:-ml-80 lg:left-1/2 lg:ml-0 lg:-translate-x-1/2 lg:translate-y-0">
+          <circle r="512" cx="512" cy="512" fill="url(#759c1415-0410-454c-8f7c-9a820de03641)" fill-opacity="0.7" />
+          <defs>
+            <radialGradient id="759c1415-0410-454c-8f7c-9a820de03641">
+              <stop stop-color="#7775D6" />
+              <stop offset="1" stop-color="#E935C1" />
+            </radialGradient>
+          </defs>
+        </svg>
+
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-center w-full gap-12">
+          <!-- Coluna Esquerda -->
+          <div class="flex-1 text-center lg:text-left lg:max-w-lg lg:self-start">
+            <h2 class="text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+              Crie seu site profissional agora mesmo
+            </h2>
+            <p class="mt-6 text-lg/8 text-gray-300 sm:text-xl">
+              Não perca mais tempo nem dinheiro.<br />
+              Em poucos minutos você terá um site completo, bonito e pronto para atrair clientes.
+            </p>
+          </div>
+
+          <!-- Coluna Direita - Formulário -->
+          <div class="flex-1 max-w-md w-full lg:max-w-lg">
+            <form class="space-y-6" id="cta-form">
+              <div>
+                <label for="nome" class="block text-sm/6 font-semibold text-white mb-2">Nome</label>
+                <input type="text" id="nome" name="nome" placeholder="Seu nome" required minlength="2" maxlength="50"
+                  class="block w-full rounded-md bg-white/5 px-3.5 py-2.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-pink-500 transition-colors">
+                <span class="error-message hidden text-red-300 text-xs mt-1"></span>
+              </div>
+
+              <div>
+                <label for="email" class="block text-sm/6 font-semibold text-white mb-2">E-mail</label>
+                <input type="email" id="email" name="email" placeholder="seu@email.com" required
+                  pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+                  class="block w-full rounded-md bg-white/5 px-3.5 py-2.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-pink-500 transition-colors">
+                <span class="error-message hidden text-red-300 text-xs mt-1"></span>
+              </div>
+
+              <div>
+                <label for="telefone" class="block text-sm/6 font-semibold text-white mb-2">Telefone/WhatsApp</label>
+                <input type="tel" id="telefone" name="telefone" placeholder="(11) 99999-9999" required
+                  pattern="^\(\d{2}\) 9?\d{4}-?\d{4}$" maxlength="15"
+                  class="block w-full rounded-md bg-white/5 px-3.5 py-2.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-pink-500 transition-colors">
+                <span class="error-message hidden text-red-300 text-xs mt-1"></span>
+              </div>
+
+              <!-- Tracking UTM / origem -->
+              <input type="hidden" id="utm_source" name="utm_source" />
+              <input type="hidden" id="utm_medium" name="utm_medium" />
+              <input type="hidden" id="utm_campaign" name="utm_campaign" />
+              <input type="hidden" id="utm_term" name="utm_term" />
+              <input type="hidden" id="utm_content" name="utm_content" />
+              <input type="hidden" id="origin_page" name="origin_page" />
+              <input type="hidden" id="origin_referrer" name="origin_referrer" />
+
+              <!-- LGPD -->
+              <div class="pt-2">
+                <label class="flex items-start gap-2 text-sm/6 text-gray-200">
+                  <input id="lgpdConsent" name="lgpd_consent" type="checkbox"
+                    class="mt-1 h-4 w-4 rounded border-gray-300 text-pink-500 focus:ring-pink-500" required />
+                  <span>
+                    Li e aceito a
+                    <a href="/politica-de-privacidade" target="_blank"
+                      class="underline text-pink-300 hover:text-pink-200">
+                      Política de Privacidade
+                    </a>
+                    e autorizo o uso dos meus dados para contato, conforme LGPD.
+                  </span>
+                </label>
+              </div>
+
+              <div class="pt-4">
+                <button type="submit"
+                  class="w-full rounded-md bg-pink-600 px-8 py-3 sm:px-16 sm:py-4 text-sm sm:text-base font-semibold text-white shadow-xs hover:bg-pink-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  <span class="button-text">Quero meu site agora</span>
+                  <span class="loading-spinner hidden">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg"
+                      fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                      </path>
+                    </svg>
+                    Enviando...
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="bg-white" aria-labelledby="footer-heading">
+    <div class="mx-auto max-w-7xl px-6 lg:px-8 pt-8 pb-4">
+      <div class="border-t border-gray-900/10 pt-8 pb-8">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <img src="src/images/Logo_AtomicPage.png" alt="AtomicPage" class="h-8 w-auto">
+          </div>
+          <p class="text-xs/5 text-gray-500">
+            &copy; 2024 AtomicPage. Todos os direitos reservados.
+          </p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const ATOMICCRM_API_BASE = 'https://atomic-crm-qnrb.vercel.app';
+
+      // ========= FUNÇÕES AUXILIARES =========
+
+      function applyPhoneMask(value) {
+        value = value.replace(/\D/g, '');
+        if (value.length <= 10) {
+          value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+        } else {
+          value = value.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3');
+        }
+        return value;
+      }
+
+      function validateEmail(email) {
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        return emailRegex.test(email);
+      }
+
+      function validatePhone(phone) {
+        const cleanPhone = phone.replace(/\D/g, '');
+        return cleanPhone.length >= 10 && cleanPhone.length <= 11;
+      }
+
+      function showError(input, message) {
+        const errorSpan = input.nextElementSibling;
+        errorSpan.textContent = message;
+        errorSpan.classList.remove('hidden');
+        errorSpan.classList.add('block');
+        input.classList.add('outline-red-400', 'bg-red-50/10');
+        input.classList.remove('outline-pink-500', 'bg-white/5');
+      }
+
+      function clearError(input) {
+        const errorSpan = input.nextElementSibling;
+        errorSpan.classList.add('hidden');
+        errorSpan.classList.remove('block');
+        input.classList.remove('outline-red-400', 'bg-red-50/10');
+        input.classList.add('outline-pink-500', 'bg-white/5');
+      }
+
+      function showNotification(message, type = 'success') {
+        const existingNotification = document.getElementById('notification');
+        if (existingNotification) {
+          existingNotification.remove();
+        }
+
+        const notification = document.createElement('div');
+        notification.id = 'notification';
+        notification.className = `
+          fixed top-4 right-4 z-50 max-w-sm p-4 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out
+          ${type === 'success'
+            ? 'bg-green-600 text-white border border-green-500'
+            : 'bg-red-600 text-white border border-red-500'}
+        `;
+
+        const icon = type === 'success'
+          ? `<svg class="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>`
+          : `<svg class="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>`;
+
+        notification.innerHTML = `
+          <div class="flex items-start">
+            ${icon}
+            <div class="flex-1">
+              <p class="text-sm font-medium">${message}</p>
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-white/80 hover:text-white">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+              </svg>
+            </button>
+          </div>
+        `;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+          notification.style.transform = 'translateX(0)';
+          notification.style.opacity = '1';
+        }, 100);
+
+        setTimeout(() => {
+          if (notification && notification.parentElement) {
+            notification.style.transform = 'translateX(100%)';
+            notification.style.opacity = '0';
+            setTimeout(() => {
+              if (notification && notification.parentElement) {
+                notification.remove();
+              }
+            }, 300);
+          }
+        }, 5000);
+      }
+
+      function getErrorDetails(error) {
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+          return {
+            title: 'Problema de Conexão',
+            message: 'Não foi possível conectar com nossos servidores. Verifique sua conexão com a internet e tente novamente.',
+            suggestion: 'Certifique-se de que está conectado à internet.'
+          };
+        }
+
+        if (error.message.includes('Failed to fetch')) {
+          return {
+            title: 'Falha na Comunicação',
+            message: 'Houve um problema ao enviar seus dados. Isso pode ser devido a uma conexão instável.',
+            suggestion: 'Tente novamente em alguns segundos.'
+          };
+        }
+
+        if (error.message.includes('NetworkError')) {
+          return {
+            title: 'Erro de Rede',
+            message: 'Problema na rede detectado. Verifique sua conexão.',
+            suggestion: 'Recarregue a página e tente novamente.'
+          };
+        }
+
+        return {
+          title: 'Erro Inesperado',
+          message: 'Algo não saiu como esperado ao processar sua solicitação.',
+          suggestion: 'Por favor, tente novamente. Se o problema persistir, entre em contato conosco.'
+        };
+      }
+
+      function getUrlParams() {
+        const params = new URLSearchParams(window.location.search);
+        return {
+          utm_source: params.get('utm_source') || '',
+          utm_medium: params.get('utm_medium') || '',
+          utm_campaign: params.get('utm_campaign') || '',
+          utm_term: params.get('utm_term') || '',
+          utm_content: params.get('utm_content') || ''
+        };
+      }
+
+      function fillTrackingHiddenFields(form) {
+        const utm = getUrlParams();
+        form.elements['utm_source'].value = utm.utm_source;
+        form.elements['utm_medium'].value = utm.utm_medium;
+        form.elements['utm_campaign'].value = utm.utm_campaign;
+        form.elements['utm_term'].value = utm.utm_term;
+        form.elements['utm_content'].value = utm.utm_content;
+        form.elements['origin_page'].value = window.location.href;
+        form.elements['origin_referrer'].value = document.referrer || '';
+      }
+
+      // ========= ELEMENTOS DO FORM =========
+
+      const form = document.getElementById('cta-form');
+      const nomeInput = document.getElementById('nome');
+      const emailInput = document.getElementById('email');
+      const telefoneInput = document.getElementById('telefone');
+      const lgpdCheckbox = document.getElementById('lgpdConsent');
+
+      const submitButton = form.querySelector('button[type="submit"]');
+      const buttonText = submitButton.querySelector('.button-text');
+      const loadingSpinner = submitButton.querySelector('.loading-spinner');
+
+      telefoneInput.addEventListener('input', function (e) {
+        const cursorPosition = e.target.selectionStart;
+        const originalLength = e.target.value.length;
+
+        e.target.value = applyPhoneMask(e.target.value);
+
+        const newLength = e.target.value.length;
+        const newCursorPosition = cursorPosition + (newLength - originalLength);
+        e.target.setSelectionRange(newCursorPosition, newCursorPosition);
+
+        if (e.target.value.length > 0) {
+          if (validatePhone(e.target.value)) {
+            clearError(e.target);
+          } else {
+            const cleanPhone = e.target.value.replace(/\D/g, '');
+            if (cleanPhone.length < 10) {
+              showError(e.target, 'Telefone deve ter pelo menos 10 dígitos (com DDD)');
+            } else if (cleanPhone.length > 11) {
+              showError(e.target, 'Telefone deve ter no máximo 11 dígitos');
+            } else {
+              showError(e.target, 'Formato de telefone inválido');
+            }
+          }
+        } else {
+          clearError(e.target);
+        }
+      });
+
+      emailInput.addEventListener('blur', function (e) {
+        if (e.target.value.length > 0) {
+          if (validateEmail(e.target.value)) {
+            clearError(e.target);
+          } else {
+            if (!e.target.value.includes('@')) {
+              showError(e.target, 'E-mail deve conter o símbolo @');
+            } else if (!e.target.value.includes('.')) {
+              showError(e.target, 'E-mail deve conter um domínio válido (ex: .com)');
+            } else {
+              showError(e.target, 'Formato de e-mail inválido');
+            }
+          }
+        }
+      });
+
+      nomeInput.addEventListener('blur', function (e) {
+        const value = e.target.value.trim();
+        if (value.length === 0) {
+          showError(e.target, 'Nome é obrigatório');
+        } else if (value.length < 2) {
+          showError(e.target, 'Nome deve ter pelo menos 2 caracteres');
+        } else if (value.length > 50) {
+          showError(e.target, 'Nome deve ter no máximo 50 caracteres');
+        } else if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(value)) {
+          showError(e.target, 'Nome deve conter apenas letras e espaços');
+        } else {
+          clearError(e.target);
+        }
+      });
+
+      [nomeInput, emailInput, telefoneInput].forEach((input) => {
+        input.addEventListener('focus', function () {
+          clearError(this);
+        });
+      });
+
+      // ========= SUBMIT PARA ATOMICCRM =========
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        let isValid = true;
+        let firstErrorField = null;
+
+        const nomeValue = nomeInput.value.trim();
+        if (nomeValue.length === 0) {
+          showError(nomeInput, 'Nome é obrigatório');
+          isValid = false;
+          if (!firstErrorField) firstErrorField = nomeInput;
+        } else if (nomeValue.length < 2) {
+          showError(nomeInput, 'Nome deve ter pelo menos 2 caracteres');
+          isValid = false;
+          if (!firstErrorField) firstErrorField = nomeInput;
+        } else if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(nomeValue)) {
+          showError(nomeInput, 'Nome deve conter apenas letras e espaços');
+          isValid = false;
+          if (!firstErrorField) firstErrorField = nomeInput;
+        }
+
+        if (!validateEmail(emailInput.value)) {
+          if (emailInput.value.trim().length === 0) {
+            showError(emailInput, 'E-mail é obrigatório');
+          } else {
+            showError(emailInput, 'Por favor, insira um e-mail válido (ex: seu@email.com)');
+          }
+          isValid = false;
+          if (!firstErrorField) firstErrorField = emailInput;
+        }
+
+        if (!validatePhone(telefoneInput.value)) {
+          const cleanPhone = telefoneInput.value.replace(/\D/g, '');
+          if (cleanPhone.length === 0) {
+            showError(telefoneInput, 'Telefone é obrigatório');
+          } else if (cleanPhone.length < 10) {
+            showError(telefoneInput, 'Telefone deve ter pelo menos 10 dígitos (com DDD)');
+          } else {
+            showError(telefoneInput, 'Formato de telefone inválido');
+          }
+          isValid = false;
+          if (!firstErrorField) firstErrorField = telefoneInput;
+        }
+
+        if (!lgpdCheckbox.checked) {
+          isValid = false;
+          if (!firstErrorField) firstErrorField = lgpdCheckbox;
+          showNotification('Você precisa aceitar a Política de Privacidade para continuar.', 'error');
+        }
+
+        if (!isValid) {
+          if (firstErrorField && firstErrorField.focus) {
+            firstErrorField.focus();
+            firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          if (firstErrorField !== lgpdCheckbox) {
+            showNotification('Corrija os campos destacados antes de enviar.', 'error');
+          }
+          return;
+        }
+
+        fillTrackingHiddenFields(form);
+
+        submitButton.disabled = true;
+        buttonText.classList.add('hidden');
+        loadingSpinner.classList.remove('hidden');
+
+        const payload = {
+          name: nomeInput.value.trim(),
+          email: emailInput.value.trim(),
+          phone: telefoneInput.value.trim(),
+          utm_source: form.elements['utm_source'].value,
+          utm_medium: form.elements['utm_medium'].value,
+          utm_campaign: form.elements['utm_campaign'].value,
+          utm_term: form.elements['utm_term'].value,
+          utm_content: form.elements['utm_content'].value,
+          origin_page: form.elements['origin_page'].value,
+          origin_referrer: form.elements['origin_referrer'].value,
+          lgpd_consent: lgpdCheckbox.checked,
+          lgpd_consent_version: 'v1-2025-11-26'
+        };
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        fetch(ATOMICCRM_API_BASE + '/api/lead', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        })
+          .then((response) => {
+            clearTimeout(timeoutId);
+            return response
+              .json()
+              .catch(() => null)
+              .then((data) => ({ response, data }));
+          })
+          .then(({ response, data }) => {
+            if (response.ok && data && data.ok !== false) {
+              form.reset();
+              lgpdCheckbox.checked = false;
+
+              showNotification(
+                'Formulário enviado com sucesso! Confira seu e-mail e confirme o cadastro para ativar seu acesso.',
+                'success'
+              );
+
+              setTimeout(() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }, 1000);
+            } else {
+              const msg =
+                (data && (data.message || data.error)) ||
+                'Não foi possível enviar seus dados ao momento. Tente novamente em alguns minutos.';
+              showNotification(msg, 'error');
+            }
+          })
+          .catch((error) => {
+            clearTimeout(timeoutId);
+            console.error('Erro detalhado:', error);
+            if (error.name === 'AbortError') {
+              showNotification(
+                'Tempo limite excedido ao enviar seus dados. Verifique sua conexão e tente novamente.',
+                'error'
+              );
+            } else {
+              const errorDetails = getErrorDetails(error);
+              showNotification(
+                `${errorDetails.title}: ${errorDetails.message} ${errorDetails.suggestion}`,
+                'error'
+              );
+            }
+          })
+          .finally(() => {
+            submitButton.disabled = false;
+            buttonText.classList.remove('hidden');
+            loadingSpinner.classList.add('hidden');
+          });
+      });
+
+      // FAQ toggle
+      const faqTriggers = document.querySelectorAll('.faq-trigger');
+      faqTriggers.forEach((trigger) => {
+        trigger.addEventListener('click', function () {
+          const targetId = this.getAttribute('data-target');
+          const content = document.getElementById(targetId);
+          const icon = this.querySelector('.faq-icon');
+
+          content.classList.toggle('hidden');
+
+          if (content.classList.contains('hidden')) {
+            icon.style.transform = 'rotate(0deg)';
+          } else {
+            icon.style.transform = 'rotate(45deg)';
+          }
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>

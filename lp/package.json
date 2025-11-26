@@ -1,0 +1,13 @@
+{
+  "name": "atomicpage-landing",
+  "version": "1.0.0",
+  "description": "Landing page da AtomicPage",
+  "main": "index.html",
+  "dependencies": {
+    "nodemailer": "^6.9.1"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'Build completed'"
+  }
+}
