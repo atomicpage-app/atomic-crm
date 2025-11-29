@@ -2,6 +2,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+export const runtime = "nodejs";
+
 // =========================
 // ENVIRONMENT
 // =========================
@@ -12,9 +14,19 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const MAIL_FROM =
   process.env.MAIL_FROM || "AtomicPage <no-reply@atomicpage.com.br>";
 const APP_BASE_URL =
-  process.env.APP_BASE_URL || "https://atomic-crm-qnrb.vercel.app";
+  process.env.APP_BASE_URL ||
+  process.env.NEXT_PUBLIC_APP_BASE_URL ||
+  "https://atomic-crm-qnrb.vercel.app";
 
 const ALLOWED_ORIGIN = "https://atomicpage.com.br";
+
+console.log("[LEAD_ROUTE_ENV_CHECK]", {
+  HAS_SUPABASE_URL: !!SUPABASE_URL,
+  HAS_SUPABASE_SERVICE_ROLE_KEY: !!SUPABASE_SERVICE_ROLE_KEY,
+  HAS_RESEND_API_KEY: !!RESEND_API_KEY,
+  MAIL_FROM,
+  APP_BASE_URL,
+});
 
 // =========================
 // TYPES
@@ -104,6 +116,12 @@ async function sendConfirmationEmailSafe(email: string, token: string) {
   `;
 
   try {
+    console.log("[RESEND] Enviando email de confirmação", {
+      to: email,
+      from: MAIL_FROM,
+      confirmUrl,
+    });
+
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -118,19 +136,28 @@ async function sendConfirmationEmailSafe(email: string, token: string) {
       }),
     });
 
+    const textBody = await res.text().catch(() => "");
+
     if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      console.error("RESEND_REQUEST_FAILED", res.status, body);
+      console.error("RESEND_REQUEST_FAILED", {
+        status: res.status,
+        body: textBody,
+      });
 
       return {
         sent: false,
         reason: "RESEND_REQUEST_FAILED" as const,
         status: res.status,
-        body,
+        body: textBody,
       };
     }
 
-    return { sent: true as const };
+    console.log("[RESEND] Email aceito pela API", {
+      status: res.status,
+      body: textBody,
+    });
+
+    return { sent: true as const, status: res.status, body: textBody };
   } catch (e: any) {
     console.error("RESEND_UNEXPECTED_ERROR", e);
     return {
@@ -180,12 +207,14 @@ export async function GET(req: Request) {
 // =========================
 export async function POST(req: Request) {
   const origin = req.headers.get("origin");
+  console.log("[LEAD] POST /api/lead recebido", { origin });
 
   let body: any = null;
 
   try {
     body = await req.json();
   } catch {
+    console.error("[LEAD] INVALID_JSON");
     return respondJson(
       { ok: false, error: "INVALID_JSON", message: "JSON inválido." },
       400,
@@ -199,18 +228,18 @@ export async function POST(req: Request) {
 
   // Ainda lemos UTM/LGPD para futuro, mas NÃO tentamos gravar em colunas inexistentes
   const utm_source = safeString(body.utm_source);
-  // const utm_medium = safeString(body.utm_medium);
-  // const utm_campaign = safeString(body.utm_campaign);
-  // const utm_term = safeString(body.utm_term);
-  // const utm_content = safeString(body.utm_content);
-
-  // const origin_page = safeString(body.origin_page);
-  // const origin_referrer = safeString(body.origin_referrer);
-
   const lgpd_consent = body.lgpd_consent === true;
-  // const lgpd_consent_version = safeString(body.lgpd_consent_version);
+
+  console.log("[LEAD] Payload normalizado", {
+    name,
+    email,
+    phone,
+    utm_source,
+    lgpd_consent,
+  });
 
   if (!name || !email || !phone) {
+    console.error("[LEAD] MISSING_FIELDS", { name, email, phone });
     return respondJson(
       {
         ok: false,
@@ -226,6 +255,7 @@ export async function POST(req: Request) {
     /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
   if (!emailRegex.test(email)) {
+    console.error("[LEAD] INVALID_EMAIL", { email });
     return respondJson(
       { ok: false, error: "INVALID_EMAIL", message: "E-mail inválido." },
       400,
@@ -260,7 +290,10 @@ export async function POST(req: Request) {
     );
   }
 
+  console.log("[LEAD] existingLead", existingLead);
+
   if (existingLead?.confirmed_at) {
+    console.log("[LEAD] LEAD_ALREADY_CONFIRMED", { email });
     return respondJson(
       {
         ok: false,
@@ -280,11 +313,11 @@ export async function POST(req: Request) {
     name,
     email,
     phone,
-    consent_at: lgpd_consent
-      ? now
-      : existingLead?.consent_at ?? null,
+    consent_at: lgpd_consent ? now : existingLead?.consent_at ?? null,
     source: utm_source || "atomicpage-landing",
   };
+
+  console.log("[LEAD] upsertPayload", upsertPayload);
 
   const { data: upserted, error: upsertError } = await supabase
     .from("leads")
@@ -301,15 +334,20 @@ export async function POST(req: Request) {
         ok: false,
         error: "DB_UPSERT_ERROR",
         message:
-          upsertError?.message ||
-          "Erro ao salvar lead no banco de dados.",
+          upsertError?.message || "Erro ao salvar lead no banco de dados.",
       },
       500,
       origin
     );
   }
 
+  console.log("[LEAD] upserted", upserted);
+
   if (upserted.confirmed_at) {
+    console.log("[LEAD] already_confirmed após upsert", {
+      id: upserted.id,
+      email: upserted.email,
+    });
     return respondJson(
       {
         ok: true,
@@ -325,6 +363,12 @@ export async function POST(req: Request) {
   // ===== GERA TOKEN =====
   const token = crypto.randomUUID();
   const expires = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+
+  console.log("[LEAD] Gerando token de confirmação", {
+    token,
+    expires,
+    leadId: upserted.id,
+  });
 
   const { error: updateTokenError } = await supabase
     .from("leads")
@@ -349,8 +393,15 @@ export async function POST(req: Request) {
     );
   }
 
+  console.log("[LEAD] Token salvo no banco, iniciando envio de email", {
+    email,
+    token,
+  });
+
   // ===== ENVIO DE EMAIL =====
   const emailResult = await sendConfirmationEmailSafe(email, token);
+
+  console.log("[LEAD] Resultado do envio de email", emailResult);
 
   return respondJson(
     {
