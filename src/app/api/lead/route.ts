@@ -1,258 +1,396 @@
-import { NextRequest, NextResponse } from "next/server";
+// src/app/api/lead/route.ts
+import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  // Fail fast no boot
-  throw new Error("Supabase environment variables are not configured");
-}
+// E-mail provider (ex.: Resend)
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+const MAIL_FROM =
+  process.env.MAIL_FROM || "AtomicPage <no-reply@atomicpage.com.br>";
+const APP_BASE_URL =
+  process.env.APP_BASE_URL || "https://atomic-crm-qnrb.vercel.app";
 
 const ALLOWED_ORIGIN = "https://atomicpage.com.br";
 
-function buildCorsHeaders(extra: Record<string, string> = {}) {
-  return {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-    "Access-Control-Allow-Methods": "POST,GET,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Allow-Credentials": "true",
-    ...extra,
-  };
-}
-
-function jsonResponse(
-  body: unknown,
-  status: number = 200,
-  extraHeaders: Record<string, string> = {}
-) {
-  return new NextResponse(JSON.stringify(body), {
-    status,
-    headers: buildCorsHeaders(extraHeaders),
-  });
-}
-
-function createSupabaseClient() {
+function getSupabaseAdmin() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
   });
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: buildCorsHeaders(),
+function buildCorsHeaders(origin?: string | null) {
+  const allowed =
+    origin && origin === ALLOWED_ORIGIN ? origin : ALLOWED_ORIGIN;
+
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Methods": "POST,GET,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Credentials": "true",
+  };
+}
+
+function corsJson(body: any, init?: number | ResponseInit) {
+  const status = typeof init === "number" ? init : init?.status;
+  const headersInit =
+    typeof init === "object" && init?.headers ? init.headers : undefined;
+
+  const headers = new Headers(headersInit);
+  const origin =
+    typeof window === "undefined"
+      ? undefined
+      : (typeof window !== "undefined" && window.location.origin) || undefined;
+
+  const corsHeaders = buildCorsHeaders(origin);
+
+  Object.entries(corsHeaders).forEach(([k, v]) => headers.set(k, v));
+
+  return new NextResponse(JSON.stringify(body), {
+    status: status ?? 200,
+    headers,
   });
 }
 
-type LeadRow = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  source: string | null;
-  created_at: string;
-  consent_at: string | null;
-  confirmed_at: string | null;
-  confirmation_token: string | null;
-  confirmation_sent_at: string | null;
-  confirmation_expires_at: string | null;
-  confirmation_confirmed_at: string | null;
-};
+// ===== OPTIONS (CORS pré-flight) =====
+export async function OPTIONS(req: Request) {
+  const origin = req.headers.get("origin");
+  const headers = buildCorsHeaders(origin);
 
-function sanitizeString(value: unknown): string {
-  if (!value || typeof value !== "string") return "";
-  return value.trim();
+  return new NextResponse(null, {
+    status: 204,
+    headers,
+  });
 }
 
-function normalizeEmail(email: unknown): string {
-  return sanitizeString(email).toLowerCase();
-}
+// ===== GET: lista simples de leads (debug / painel) =====
+export async function GET(req: Request) {
+  const origin = req.headers.get("origin");
+  const headers = buildCorsHeaders(origin);
 
-function extractSource(payload: any): string | null {
-  const utmSource = sanitizeString(payload?.utm_source);
-  if (utmSource) return utmSource;
-
-  const explicitSource = sanitizeString(payload?.source);
-  if (explicitSource) return explicitSource;
-
-  return "atomicpage-landing";
-}
-
-export async function GET() {
-  const supabase = createSupabaseClient();
-
-  const { data, error } = await supabase
-    .from("leads")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(100);
-
-  if (error) {
-    console.error("DB_LIST_ERROR", error);
-    return jsonResponse(
-      {
-        ok: false,
-        error: "DB_LIST_ERROR",
-        message: "Não foi possível listar os leads.",
-      },
-      500
-    );
-  }
-
-  return jsonResponse({ ok: true, leads: data ?? [] });
-}
-
-export async function POST(req: NextRequest) {
-  if (req.method === "OPTIONS") {
-    return OPTIONS();
-  }
-
-  let payload: any;
   try {
-    payload = await req.json();
-  } catch (e) {
-    return jsonResponse(
-      {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("leads")
+      .select(
+        "id,name,email,phone,confirmed_at,consent_at,source,created_at,confirmation_token,confirmation_sent_at,confirmation_expires_at,confirmation_confirmed_at"
+      )
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (error) {
+      console.error("[GET /api/lead] DB error:", error);
+      return new NextResponse(
+        JSON.stringify({
+          ok: false,
+          error: "DB_LIST_ERROR",
+          message: "Erro ao listar leads.",
+        }),
+        { status: 500, headers }
+      );
+    }
+
+    return new NextResponse(
+      JSON.stringify({
+        ok: true,
+        leads: data ?? [],
+      }),
+      { status: 200, headers }
+    );
+  } catch (e: any) {
+    console.error("[GET /api/lead] Unexpected error:", e);
+    return new NextResponse(
+      JSON.stringify({
         ok: false,
-        error: "INVALID_JSON",
-        message: "Corpo da requisição inválido.",
-      },
-      400
+        error: "UNEXPECTED_ERROR",
+        message: "Erro inesperado ao listar leads.",
+      }),
+      { status: 500, headers }
     );
   }
+}
 
-  const name = sanitizeString(payload?.name);
-  const email = normalizeEmail(payload?.email);
-  const phoneRaw = sanitizeString(payload?.phone);
-  const phone = phoneRaw || null;
-  const source = extractSource(payload);
-  const lgpdConsent = Boolean(payload?.lgpd_consent);
-
-  if (!name || !email || !phone) {
-    return jsonResponse(
-      {
-        ok: false,
-        error: "VALIDATION_ERROR",
-        message: "Nome, e-mail e telefone são obrigatórios.",
-      },
-      400
+// ===== Função segura para envio de e-mail =====
+async function sendConfirmationEmailSafe(email: string, token: string) {
+  if (!RESEND_API_KEY) {
+    console.error(
+      "[sendConfirmationEmailSafe] RESEND_API_KEY não configurada. E-mail não será enviado."
     );
+    return { sent: false, reason: "RESEND_NOT_CONFIGURED" as const };
   }
 
-  const supabase = createSupabaseClient();
+  const confirmUrl = `${APP_BASE_URL}/api/confirm?token=${encodeURIComponent(
+    token
+  )}&email=${encodeURIComponent(email)}`;
 
-  // 1) Verifica se já existe lead para o e-mail
-  const { data: existing, error: existingError } = await supabase
-    .from("leads")
-    .select("*")
-    .eq("email", email)
-    .maybeSingle<LeadRow>();
+  const html = `
+    <p>Olá,</p>
+    <p>Recebemos seu interesse na AtomicPage / AtomicCRM.</p>
+    <p>Para confirmar seu cadastro, clique no botão abaixo:</p>
+    <p>
+      <a href="${confirmUrl}" 
+         style="display:inline-block;padding:10px 18px;background:#ec4899;color:#ffffff;
+                text-decoration:none;border-radius:6px;font-weight:600">
+        Confirmar cadastro
+      </a>
+    </p>
+    <p>Se você não fez essa solicitação, pode ignorar este e-mail.</p>
+  `;
 
-  if (existingError) {
-    console.error("DB_LOOKUP_ERROR", existingError);
-    return jsonResponse(
-      {
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: MAIL_FROM,
+        to: [email],
+        subject: "Confirme seu cadastro - AtomicPage / AtomicCRM",
+        html,
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error(
+        "[sendConfirmationEmailSafe] Resend error status:",
+        res.status,
+        "body:",
+        text
+      );
+      return {
+        sent: false,
+        reason: "RESEND_REQUEST_FAILED" as const,
+        status: res.status,
+        body: text,
+      };
+    }
+
+    return { sent: true as const };
+  } catch (e: any) {
+    console.error("[sendConfirmationEmailSafe] Unexpected error:", e);
+    return {
+      sent: false as const,
+      reason: "RESEND_UNEXPECTED_ERROR" as const,
+      message: e?.message ?? "Erro desconhecido ao enviar e-mail.",
+    };
+  }
+}
+
+// ===== POST: cria/atualiza lead + gera token + envia e-mail =====
+export async function POST(req: Request) {
+  const origin = req.headers.get("origin");
+  const headers = buildCorsHeaders(origin);
+
+  try {
+    const body = await req.json().catch(() => null);
+
+    if (!body || typeof body !== "object") {
+      return new NextResponse(
+        JSON.stringify({
+          ok: false,
+          error: "INVALID_BODY",
+          message: "Payload inválido.",
+        }),
+        { status: 400, headers }
+      );
+    }
+
+    let {
+      name,
+      email,
+      phone,
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      utm_term,
+      utm_content,
+      origin_page,
+      origin_referrer,
+      lgpd_consent,
+      lgpd_consent_version,
+    } = body as any;
+
+    name = typeof name === "string" ? name.trim() : "";
+    email =
+      typeof email === "string" ? email.trim().toLowerCase() : "";
+    phone = typeof phone === "string" ? phone.trim() : "";
+
+    if (!name || !email || !phone) {
+      return new NextResponse(
+        JSON.stringify({
+          ok: false,
+          error: "MISSING_FIELDS",
+          message: "Nome, e-mail e telefone são obrigatórios.",
+        }),
+        { status: 400, headers }
+      );
+    }
+
+    const emailRegex =
+      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      return new NextResponse(
+        JSON.stringify({
+          ok: false,
+          error: "INVALID_EMAIL",
+          message: "E-mail inválido.",
+        }),
+        { status: 400, headers }
+      );
+    }
+
+    const supabase = getSupabaseAdmin();
+
+    // Verifica se já existe lead para este e-mail
+    const { data: existingLead, error: existingError } = await supabase
+      .from("leads")
+      .select(
+        "id,email,confirmed_at,confirmation_token,confirmation_expires_at"
+      )
+      .eq("email", email)
+      .maybeSingle();
+
+    if (existingError) {
+      console.error(
+        "[POST /api/lead] Error loading existing lead:",
+        existingError
+      );
+      return new NextResponse(
+        JSON.stringify({
+          ok: false,
+          error: "DB_LOOKUP_ERROR",
+          message: "Erro ao verificar lead existente.",
+        }),
+        { status: 500, headers }
+      );
+    }
+
+    if (existingLead && existingLead.confirmed_at) {
+      // já está confirmado
+      return new NextResponse(
+        JSON.stringify({
+          ok: false,
+          error: "LEAD_ALREADY_CONFIRMED",
+          message:
+            "Este e-mail já foi confirmado anteriormente. Caso precise de ajuda, entre em contato.",
+        }),
+        { status: 400, headers }
+      );
+    }
+
+    const now = new Date().toISOString();
+
+    // Upsert do lead (cria ou atualiza dados básicos)
+    const { data: upserted, error: upsertError } = await supabase
+      .from("leads")
+      .upsert(
+        {
+          name,
+          email,
+          phone,
+          consent_at:
+            lgpd_consent === true ? now : existingLead?.consent_at ?? null,
+          source: utm_source || "atomicpage-landing",
+          utm_source: utm_source || null,
+          utm_medium: utm_medium || null,
+          utm_campaign: utm_campaign || null,
+          utm_term: utm_term || null,
+          utm_content: utm_content || null,
+          origin_page: origin_page || null,
+          origin_referrer: origin_referrer || null,
+          lgpd_consent: lgpd_consent === true,
+          lgpd_consent_version:
+            lgpd_consent_version || existingLead?.lgpd_consent_version || null,
+        },
+        {
+          onConflict: "email",
+        }
+      )
+      .select("id,email,confirmed_at")
+      .single();
+
+    if (upsertError || !upserted) {
+      console.error("[POST /api/lead] DB upsert error:", upsertError);
+      return new NextResponse(
+        JSON.stringify({
+          ok: false,
+          error: "DB_UPSERT_ERROR",
+          message:
+            "Não foi possível salvar seus dados no momento. Tente novamente em alguns minutos.",
+        }),
+        { status: 500, headers }
+      );
+    }
+
+    // Se por algum motivo já estiver confirmado aqui, não envia email
+    if (upserted.confirmed_at) {
+      return new NextResponse(
+        JSON.stringify({
+          ok: true,
+          leadId: upserted.id,
+          status: "already_confirmed",
+          email: { sent: false, reason: "ALREADY_CONFIRMED" },
+        }),
+        { status: 200, headers }
+      );
+    }
+
+    // Gera token de confirmação e atualiza lead
+    const token = crypto.randomUUID();
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // +24h
+
+    const { error: updateTokenError } = await supabase
+      .from("leads")
+      .update({
+        confirmation_token: token,
+        confirmation_sent_at: now,
+        confirmation_expires_at: expires,
+        confirmation_confirmed_at: null,
+      })
+      .eq("id", upserted.id);
+
+    if (updateTokenError) {
+      console.error(
+        "[POST /api/lead] Error updating confirmation token:",
+        updateTokenError
+      );
+      return new NextResponse(
+        JSON.stringify({
+          ok: false,
+          error: "DB_TOKEN_UPDATE_ERROR",
+          message:
+            "Lead salvo, mas houve erro ao preparar a confirmação por e-mail.",
+        }),
+        { status: 500, headers }
+      );
+    }
+
+    // Envia e-mail de confirmação (com tratamento de erro sem quebrar o fluxo)
+    const emailResult = await sendConfirmationEmailSafe(email, token);
+
+    return new NextResponse(
+      JSON.stringify({
+        ok: true,
+        leadId: upserted.id,
+        status: existingLead ? "updated" : "created",
+        email: emailResult,
+      }),
+      { status: 200, headers }
+    );
+  } catch (e: any) {
+    console.error("[POST /api/lead] Unexpected error:", e);
+    return new NextResponse(
+      JSON.stringify({
         ok: false,
-        error: "DB_LOOKUP_ERROR",
+        error: "UNEXPECTED_ERROR",
         message:
-          "Não foi possível processar seu cadastro agora. Tente novamente em instantes.",
-      },
-      500
+          "Erro inesperado ao processar seu cadastro. Tente novamente em alguns minutos.",
+      }),
+      { status: 500, headers }
     );
   }
-
-  // 2) Se já está confirmado, retorna erro amigável
-  if (existing && existing.confirmed_at) {
-    return jsonResponse(
-      {
-        ok: false,
-        error: "LEAD_ALREADY_CONFIRMED",
-        message:
-          "Este e-mail já está cadastrado e confirmado. Se não encontrar nosso e-mail, verifique a caixa de spam ou promoções.",
-      },
-      409
-    );
-  }
-
-  const now = new Date();
-  const nowIso = now.toISOString();
-  const expiresIso = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(); // +24h
-
-  const confirmationToken =
-    existing?.confirmation_token && !existing.confirmation_confirmed_at
-      ? existing.confirmation_token
-      : crypto.randomUUID();
-
-  const consentAt =
-    lgpdConsent || !existing ? nowIso : existing?.consent_at ?? null;
-
-  const leadToUpsert: Partial<LeadRow> = {
-    // se existir, preserva o id
-    id: existing?.id,
-    name,
-    email,
-    phone,
-    source,
-    consent_at: consentAt,
-    // sempre começa como não confirmado via e-mail
-    confirmed_at: null,
-    confirmation_token: confirmationToken,
-    confirmation_expires_at: expiresIso,
-    confirmation_confirmed_at: null,
-  };
-
-  const { data: upserted, error: upsertError } = await supabase
-    .from("leads")
-    .upsert(leadToUpsert, { onConflict: "email" })
-    .select()
-    .maybeSingle<LeadRow>();
-
-  if (upsertError || !upserted) {
-    console.error("DB_UPSERT_ERROR", upsertError);
-    return jsonResponse(
-      {
-        ok: false,
-        error: "DB_UPSERT_ERROR",
-        message:
-          "Não foi possível salvar seus dados agora. Tente novamente em alguns instantes.",
-      },
-      500
-    );
-  }
-
-  // Aqui você já tem o token e os dados do lead.
-  // A lógica de disparo de e-mail deve usar `upserted.confirmation_token` + `upserted.email`.
-  // Exemplo (se você já tiver um endpoint interno /api/send-confirmation ou similar):
-  //
-  // try {
-  //   await fetch(`${process.env.APP_BASE_URL}/api/send-confirmation`, {
-  //     method: "POST",
-  //     headers: { "Content-Type": "application/json" },
-  //     body: JSON.stringify({
-  //       email: upserted.email,
-  //       name: upserted.name,
-  //       token: upserted.confirmation_token,
-  //     }),
-  //   });
-  // } catch (mailError) {
-  //   console.error("MAIL_DISPATCH_ERROR", mailError);
-  // }
-
-  return jsonResponse(
-    {
-      ok: true,
-      action: existing ? "updated" : "created",
-      leadId: upserted.id,
-      email: upserted.email,
-      needsConfirmation: true,
-      message:
-        "Cadastro recebido com sucesso. Enviamos um e-mail para confirmação. Verifique sua caixa de entrada e spam.",
-    },
-    200
-  );
 }
