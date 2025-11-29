@@ -343,22 +343,10 @@ export async function POST(req: Request) {
 
   console.log("[LEAD] upserted", upserted);
 
-  if (upserted.confirmed_at) {
-    console.log("[LEAD] already_confirmed após upsert", {
-      id: upserted.id,
-      email: upserted.email,
-    });
-    return respondJson(
-      {
-        ok: true,
-        leadId: upserted.id,
-        status: "already_confirmed",
-        email: { sent: false, reason: "ALREADY_CONFIRMATED" },
-      },
-      200,
-      origin
-    );
-  }
+  // IMPORTANTE:
+  // NÃO usar upserted.confirmed_at para considerar "already_confirmed".
+  // Se o schema tiver default em confirmed_at, isso marcaria todo lead novo
+  // como já confirmado e nunca enviaria e-mail.
 
   // ===== GERA TOKEN =====
   const token = crypto.randomUUID();
