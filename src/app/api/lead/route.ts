@@ -59,7 +59,10 @@ function buildCorsHeaders(origin?: string | null) {
 function respondJson(body: any, status = 200, origin?: string | null) {
   return new NextResponse(JSON.stringify(body), {
     status,
-    headers: buildCorsHeaders(origin),
+    headers: {
+      ...buildCorsHeaders(origin),
+      "Content-Type": "application/json",
+    },
   });
 }
 
@@ -139,7 +142,7 @@ async function sendConfirmationEmailSafe(email: string, token: string) {
 }
 
 // =========================
-// GET (debug / painel)
+// GET (debug / painel rápido)
 // =========================
 export async function GET(req: Request) {
   const origin = req.headers.get("origin");
@@ -194,17 +197,18 @@ export async function POST(req: Request) {
   const email = normalizeEmail(body.email);
   const phone = safeString(body.phone);
 
+  // Ainda lemos UTM/LGPD para futuro, mas NÃO tentamos gravar em colunas inexistentes
   const utm_source = safeString(body.utm_source);
-  const utm_medium = safeString(body.utm_medium);
-  const utm_campaign = safeString(body.utm_campaign);
-  const utm_term = safeString(body.utm_term);
-  const utm_content = safeString(body.utm_content);
+  // const utm_medium = safeString(body.utm_medium);
+  // const utm_campaign = safeString(body.utm_campaign);
+  // const utm_term = safeString(body.utm_term);
+  // const utm_content = safeString(body.utm_content);
 
-  const origin_page = safeString(body.origin_page);
-  const origin_referrer = safeString(body.origin_referrer);
+  // const origin_page = safeString(body.origin_page);
+  // const origin_referrer = safeString(body.origin_referrer);
 
   const lgpd_consent = body.lgpd_consent === true;
-  const lgpd_consent_version = safeString(body.lgpd_consent_version);
+  // const lgpd_consent_version = safeString(body.lgpd_consent_version);
 
   if (!name || !email || !phone) {
     return respondJson(
@@ -270,39 +274,36 @@ export async function POST(req: Request) {
 
   const now = new Date().toISOString();
 
-  // ===== UPSERT =====
+  // ===== UPSERT APENAS EM COLUNAS QUE EXISTEM =====
+  const upsertPayload: any = {
+    id: existingLead?.id,
+    name,
+    email,
+    phone,
+    consent_at: lgpd_consent
+      ? now
+      : existingLead?.consent_at ?? null,
+    source: utm_source || "atomicpage-landing",
+  };
+
   const { data: upserted, error: upsertError } = await supabase
     .from("leads")
-    .upsert(
-      {
-        id: existingLead?.id,
-        name,
-        email,
-        phone,
-        consent_at: lgpd_consent
-          ? now
-          : existingLead?.consent_at ?? null,
-        source: utm_source || "atomicpage-landing",
-        utm_source: utm_source || null,
-        utm_medium: utm_medium || null,
-        utm_campaign: utm_campaign || null,
-        utm_term: utm_term || null,
-        utm_content: utm_content || null,
-        origin_page: origin_page || null,
-        origin_referrer: origin_referrer || null,
-        lgpd_consent,
-        lgpd_consent_version: lgpd_consent_version || null,
-        updated_at: now,
-      },
-      { onConflict: "email" }
-    )
-    .select("id,email,confirmed_at")
+    .upsert(upsertPayload, {
+      onConflict: "email",
+    })
+    .select("id,email,confirmed_at,consent_at")
     .single();
 
   if (upsertError || !upserted) {
     console.error("DB_UPSERT_ERROR", upsertError);
     return respondJson(
-      { ok: false, error: "DB_UPSERT_ERROR" },
+      {
+        ok: false,
+        error: "DB_UPSERT_ERROR",
+        message:
+          upsertError?.message ||
+          "Erro ao salvar lead no banco de dados.",
+      },
       500,
       origin
     );
@@ -314,7 +315,7 @@ export async function POST(req: Request) {
         ok: true,
         leadId: upserted.id,
         status: "already_confirmed",
-        email: { sent: false, reason: "ALREADY_CONFIRMED" },
+        email: { sent: false, reason: "ALREADY_CONFIRMATED" },
       },
       200,
       origin
@@ -341,6 +342,7 @@ export async function POST(req: Request) {
       {
         ok: false,
         error: "DB_TOKEN_UPDATE_ERROR",
+        message: updateTokenError.message || "Erro ao salvar token.",
       },
       500,
       origin
