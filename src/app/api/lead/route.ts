@@ -1,232 +1,246 @@
-import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
+import { Resend } from "resend";
 
-const SUPABASE_URL = process.env.SUPABASE_URL!;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const EMAIL_FROM = process.env.CONFIRM_EMAIL_FROM || "no-reply@atomicpage.com.br";
+const PUBLIC_APP_URL = process.env.PUBLIC_APP_URL || "https://atomic-crm-qnrb.vercel.app";
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "https://atomicpage.com.br";
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error('Missing Supabase environment variables');
+  throw new Error("Supabase não configurado no servidor");
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-const ALLOWED_ORIGINS = [
-  'https://atomicpage.com.br',
-  'https://www.atomicpage.com.br',
-  'http://localhost:5500',
-  'http://127.0.0.1:5500',
-  'http://localhost:3000'
-];
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
-function buildCorsHeaders(origin: string | null): HeadersInit {
-  const isAllowed = origin && ALLOWED_ORIGINS.includes(origin);
-  const resolvedOrigin = isAllowed ? origin! : ALLOWED_ORIGINS[0];
-
-  return {
-    'Access-Control-Allow-Origin': resolvedOrigin,
-    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Credentials': 'true',
-    Vary: 'Origin'
-  };
+function withCors(response: NextResponse) {
+  response.headers.set("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+  response.headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  response.headers.set("Access-Control-Allow-Credentials", "true");
+  return response;
 }
 
-type LeadInsertPayload = {
+export async function OPTIONS() {
+  const res = new NextResponse(null, { status: 204 });
+  return withCors(res);
+}
+
+type LeadPayload = {
   name: string;
   email: string;
   phone: string;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  utm_term?: string | null;
+  utm_content?: string | null;
+  origin_page?: string | null;
+  origin_referrer?: string | null;
+  lgpd_consent?: boolean;
+  lgpd_consent_version?: string | null;
 };
 
-function sanitizeLeadPayload(body: any): LeadInsertPayload {
-  if (!body || typeof body !== 'object') {
-    throw new Error('INVALID_BODY');
+function validatePayload(body: any): { ok: boolean; message?: string } {
+  if (!body || typeof body !== "object") {
+    return { ok: false, message: "INVALID_BODY" };
   }
 
-  const name = String(body.name || '').trim();
-  const email = String(body.email || '').trim().toLowerCase();
-  const phone = String(body.phone || '').trim();
-
-  if (!name || !email || !phone) {
-    throw new Error('MISSING_REQUIRED_FIELDS');
+  if (!body.name || typeof body.name !== "string" || body.name.trim().length < 2) {
+    return { ok: false, message: "INVALID_NAME" };
   }
 
-  return { name, email, phone };
+  if (!body.email || typeof body.email !== "string") {
+    return { ok: false, message: "INVALID_EMAIL" };
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(body.email)) {
+    return { ok: false, message: "INVALID_EMAIL" };
+  }
+
+  if (!body.phone || typeof body.phone !== "string") {
+    return { ok: false, message: "INVALID_PHONE" };
+  }
+
+  const cleanPhone = body.phone.replace(/\D/g, "");
+  if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+    return { ok: false, message: "INVALID_PHONE" };
+  }
+
+  if (!body.lgpd_consent) {
+    return { ok: false, message: "LGPD_CONSENT_REQUIRED" };
+  }
+
+  return { ok: true };
 }
 
-export async function OPTIONS(request: Request) {
-  const origin = request.headers.get('origin');
-  const corsHeaders = buildCorsHeaders(origin);
+async function sendConfirmationEmail(params: {
+  email: string;
+  name: string;
+  token: string;
+}) {
+  if (!resend) {
+    console.warn("[lead] RESEND_API_KEY não configurado; pulando envio de e-mail");
+    return;
+  }
 
-  return new Response(null, {
-    status: 204,
-    headers: corsHeaders
+  const confirmUrl = `${PUBLIC_APP_URL}/confirm?token=${encodeURIComponent(
+    params.token
+  )}&email=${encodeURIComponent(params.email)}`;
+
+  await resend.emails.send({
+    from: `Atomic CRM <${EMAIL_FROM}>`,
+    to: params.email,
+    subject: "Confirme seu cadastro no Atomic CRM",
+    html: `
+      <p>Olá, ${params.name || "tudo bem"}?</p>
+      <p>Recebemos seu cadastro para utilizar o Atomic CRM.</p>
+      <p>Para confirmar e ativar seu acesso, clique no botão abaixo:</p>
+      <p>
+        <a href="${confirmUrl}" style="
+          display:inline-block;
+          padding: 10px 16px;
+          background-color:#ec4899;
+          color:#ffffff;
+          text-decoration:none;
+          border-radius:6px;
+          font-weight:600;
+        ">
+          Confirmar meu cadastro
+        </a>
+      </p>
+      <p>Se você não fez esse cadastro, pode ignorar este e-mail.</p>
+    `,
   });
 }
 
-export async function POST(request: Request) {
-  const origin = request.headers.get('origin');
-  const corsHeaders = buildCorsHeaders(origin);
-
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json().catch(() => null);
+    const body = (await req.json()) as LeadPayload;
 
-    if (!body) {
-      return new Response(
-        JSON.stringify({ ok: false, error: 'INVALID_JSON' }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
-        }
+    const validation = validatePayload(body);
+    if (!validation.ok) {
+      return withCors(
+        NextResponse.json(
+          { ok: false, error: validation.message || "INVALID_PAYLOAD" },
+          { status: 400 }
+        )
       );
     }
 
-    const payload = sanitizeLeadPayload(body);
+    const email = body.email.trim().toLowerCase();
+    const name = body.name.trim();
+    const phone = body.phone.trim();
 
-    const { data: existing, error: selectError } = await supabase
-      .from('leads')
-      .select('id, confirmed_at')
-      .eq('email', payload.email)
+    // 1) Verifica se já existe lead para este e-mail
+    const { data: existingLead, error: selectError } = await supabase
+      .from("leads")
+      .select("*")
+      .eq("email", email)
       .maybeSingle();
 
     if (selectError) {
-      console.error('Supabase select error on /api/lead', selectError);
-    }
-
-    if (existing && existing.confirmed_at) {
-      return new Response(
-        JSON.stringify({ ok: false, error: 'LEAD_ALREADY_CONFIRMED' }),
-        {
-          status: 409,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
-        }
+      console.error("[lead] erro ao buscar lead existente:", selectError);
+      return withCors(
+        NextResponse.json(
+          { ok: false, error: "DB_SELECT_ERROR" },
+          { status: 500 }
+        )
       );
     }
 
-    let dbResult;
-
-    if (existing) {
-      dbResult = await supabase
-        .from('leads')
-        .update({
-          name: payload.name,
-          phone: payload.phone
-        })
-        .eq('id', existing.id)
-        .select('id')
-        .single();
-    } else {
-      dbResult = await supabase
-        .from('leads')
-        .insert({
-          name: payload.name,
-          email: payload.email,
-          phone: payload.phone
-        })
-        .select('id')
-        .single();
-    }
-
-    const { data, error } = dbResult;
-
-    if (error || !data) {
-      console.error('Supabase insert/update error on /api/lead', error);
-      return new Response(
-        JSON.stringify({ ok: false, error: 'DB_SAVE_ERROR' }),
-        {
-          status: 500,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          }
-        }
+    // 2) Se já está confirmado, não gera novo token / e-mail
+    if (existingLead && existingLead.confirmed_at) {
+      return withCors(
+        NextResponse.json(
+          { ok: false, error: "LEAD_ALREADY_CONFIRMED" },
+          { status: 400 }
+        )
       );
     }
 
-    return new Response(
-      JSON.stringify({
-        ok: true,
-        leadId: data.id
-      }),
-      {
-        status: existing ? 200 : 201,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
+    // 3) Gera token e define expiração
+    const token = crypto.randomUUID();
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // +24h
+
+    // 4) Upsert do lead SEM confirmar
+    const { data: upsertedLead, error: upsertError } = await supabase
+      .from("leads")
+      .upsert(
+        {
+          id: existingLead?.id,
+          name,
+          email,
+          phone,
+          source: "atomicpage-landing",
+          utm_source: body.utm_source ?? null,
+          utm_medium: body.utm_medium ?? null,
+          utm_campaign: body.utm_campaign ?? null,
+          utm_term: body.utm_term ?? null,
+          utm_content: body.utm_content ?? null,
+          origin_page: body.origin_page ?? null,
+          origin_referrer: body.origin_referrer ?? null,
+          lgpd_consent: !!body.lgpd_consent,
+          lgpd_consent_version: body.lgpd_consent_version ?? null,
+          confirmation_token: token,
+          confirmation_expires_at: expiresAt.toISOString(),
+          confirmation_sent_at: now.toISOString(),
+          // IMPORTANTE: NÃO definir confirmed_at / consent_at aqui.
+        },
+        {
+          onConflict: "email",
+          ignoreDuplicates: false,
         }
-      }
-    );
-  } catch (err: any) {
-    console.error('Unexpected error in /api/lead POST', err);
+      )
+      .select("*")
+      .single();
 
-    let errorCode = 'UNEXPECTED_ERROR';
-    let status = 500;
-
-    if (err instanceof Error) {
-      if (err.message === 'MISSING_REQUIRED_FIELDS') {
-        errorCode = 'MISSING_REQUIRED_FIELDS';
-        status = 400;
-      } else if (err.message === 'INVALID_BODY') {
-        errorCode = 'INVALID_BODY';
-        status = 400;
-      }
+    if (upsertError || !upsertedLead) {
+      console.error("[lead] erro no upsert:", upsertError);
+      return withCors(
+        NextResponse.json(
+          { ok: false, error: "DB_UPSERT_ERROR" },
+          { status: 500 }
+        )
+      );
     }
 
-    return new Response(
-      JSON.stringify({ ok: false, error: errorCode }),
-      {
-        status,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-  }
-}
-
-export async function GET(request: Request) {
-  const origin = request.headers.get('origin');
-  const corsHeaders = buildCorsHeaders(origin);
-
-  const { searchParams } = new URL(request.url);
-  const limit = Number(searchParams.get('limit') ?? '100');
-
-  const { data, error } = await supabase
-    .from('leads')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error('Supabase error on /api/lead GET', error);
-    return new Response(
-      JSON.stringify({ ok: false, error: 'DB_FETCH_ERROR' }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-  }
-
-  return new Response(
-    JSON.stringify({
-      ok: true,
-      leads: data
-    }),
-    {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      }
+    // 5) Dispara e-mail de confirmação
+    try {
+      await sendConfirmationEmail({
+        email,
+        name,
+        token,
+      });
+    } catch (emailError) {
+      console.error("[lead] erro ao enviar e-mail de confirmação:", emailError);
+      // Não falhar duro se o e-mail der erro; o lead e o token já estão salvos.
     }
-  );
+
+    return withCors(
+      NextResponse.json(
+        {
+          ok: true,
+          leadId: upsertedLead.id,
+          action: "confirm",
+        },
+        { status: 200 }
+      )
+    );
+  } catch (err) {
+    console.error("[lead] erro inesperado:", err);
+    return withCors(
+      NextResponse.json(
+        { ok: false, error: "UNEXPECTED_ERROR" },
+        { status: 500 }
+      )
+    );
+  }
 }
