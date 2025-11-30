@@ -98,7 +98,9 @@ async function sendConfirmationEmailSafe(email: string, token: string) {
     return { sent: false, reason: "RESEND_NOT_CONFIGURED" as const };
   }
 
-  const confirmUrl = `${APP_BASE_URL}/api/confirm?token=${encodeURIComponent(
+  // IMPORTANTE: agora o link aponta para /confirm (página bonita),
+  // e NÃO mais para /api/confirm.
+  const confirmUrl = `${APP_BASE_URL}/confirm?token=${encodeURIComponent(
     token
   )}&email=${encodeURIComponent(email)}`;
 
@@ -345,8 +347,6 @@ export async function POST(req: Request) {
 
   // IMPORTANTE:
   // NÃO usar upserted.confirmed_at para considerar "already_confirmed".
-  // Se o schema tiver default em confirmed_at, isso marcaria todo lead novo
-  // como já confirmado e nunca enviaria e-mail.
 
   // ===== GERA TOKEN =====
   const token = crypto.randomUUID();
