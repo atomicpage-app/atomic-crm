@@ -79,7 +79,7 @@ export default function ConfirmPage({
     idle: "Aguarde um instante...",
     loading: "Aguarde um instante enquanto validamos suas informações.",
     success:
-      "Seu e-mail foi confirmado e seus dados foram registrados no Atomic CRM. Você já pode seguir para o próximo passo.",
+      "Seu e-mail foi confirmado e seus dados foram registrados no Atomic Page. Você já pode seguir para o próximo passo.",
     expired:
       "Este link de confirmação não é mais válido. Solicite um novo cadastro para receber outro e-mail.",
     not_found:
@@ -89,7 +89,15 @@ export default function ConfirmPage({
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
+    <main className="min-h-screen flex flex-col items-center justify-center bg-slate-100 px-4 py-10">
+      
+      {/* LOGO DO PRODUTO */}
+      <img
+        src="https://atomicpage.com.br/src/images/Logo_AtomicPage.png"
+        alt="Logo Atomic Page"
+        className="w-40 mb-6 select-none"
+      />
+
       <div className="max-w-lg w-full bg-white border border-slate-200 rounded-2xl p-8 shadow-xl text-slate-900">
         <h1 className="text-2xl font-semibold mb-2">
           {titleByStatus[status]}
@@ -99,9 +107,7 @@ export default function ConfirmPage({
         </p>
 
         {status === "loading" && (
-          <p className="text-sm text-slate-500">
-            Processando sua confirmação...
-          </p>
+          <p className="text-sm text-slate-500">Processando sua confirmação...</p>
         )}
 
         {status === "success" && (
@@ -137,7 +143,7 @@ export default function ConfirmPage({
         )}
 
         <div className="mt-8 text-xs text-slate-500">
-          <p>Atomic CRM · Confirmação de cadastro</p>
+          <p>Atomic Page · Confirmação de cadastro</p>
         </div>
       </div>
     </main>
