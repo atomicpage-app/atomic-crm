@@ -1,106 +1,87 @@
-// src/app/(admin)/admin/leads/LeadActionsCell.tsx
 "use client";
 
 import { useState } from "react";
 
-type LeadStatus = "pending" | "confirmed" | "expired" | "none";
-
-type Props = {
-  leadId: string;
+type Lead = {
+  id: string;
+  name: string;
   email: string;
-  status: LeadStatus;
+  phone?: string | null;
+  created_at?: string;
+  confirmed_at?: string | null;
 };
 
-export function LeadActionsCell({ leadId, email, status }: Props) {
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+type LeadActionsCellProps = {
+  lead: Lead;
+  onResendSuccess?: () => void;
+};
 
-  const canResend = status === "pending";
+export function LeadActionsCell({ lead, onResendSuccess }: LeadActionsCellProps) {
+  const [isSending, setIsSending] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [lastSuccess, setLastSuccess] = useState<string | null>(null);
 
-  async function handleResend() {
-    setMessage(null);
-    setError(null);
+  const handleResend = async () => {
+    setIsSending(true);
+    setLastError(null);
+    setLastSuccess(null);
 
-    if (!canResend) {
-      setError("Só é possível reenviar para leads pendentes.");
-      return;
-    }
-
-    setLoading(true);
     try {
-      const res = await fetch("/api/lead/resend-confirmation", {
+      const res = await fetch("/api/lead/resend", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id: lead.id }),
       });
 
       const data = await res.json().catch(() => null);
 
       if (!res.ok || !data?.ok) {
-        if (data?.error === "LEAD_ALREADY_CONFIRMED") {
-          setError("Este lead já está confirmado.");
-        } else if (data?.error === "LEAD_NOT_FOUND") {
-          setError("Lead não encontrado.");
-        } else {
-          setError(
-            data?.error ||
-              "Não foi possível reenviar o e-mail de confirmação."
-          );
-        }
+        const message =
+          data?.message ||
+          "Não foi possível reenviar o e-mail de confirmação. Tente novamente.";
+        setLastError(message);
         return;
       }
 
-      if (data.emailStatus === "sent") {
-        setMessage(
-          `E-mail de confirmação reenviado para "${data.email ?? email}".`
-        );
-      } else if (data.emailStatus === "not_configured") {
-        setMessage(
-          "Lead atualizado, mas o envio de e-mail não foi configurado no backend."
-        );
-      } else if (data.emailStatus === "failed") {
-        setError(
-          `Erro ao enviar o e-mail: ${
-            data.emailError?.message ?? "falha desconhecida."
-          }`
-        );
-      } else {
-        setMessage("Operação concluída, verifique os logs para mais detalhes.");
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Erro de rede ao reenviar confirmação.");
+      setLastSuccess("E-mail de confirmação reenviado com sucesso.");
+      if (onResendSuccess) onResendSuccess();
+    } catch (e: any) {
+      setLastError(
+        e?.message ||
+          "Ocorreu um erro ao tentar reenviar o e-mail de confirmação."
+      );
     } finally {
-      setLoading(false);
+      setIsSending(false);
     }
-  }
+  };
 
   return (
-    <div className="flex flex-col gap-1 text-xs">
+    <div className="flex flex-col gap-1 items-start">
       <button
         type="button"
         onClick={handleResend}
-        disabled={!canResend || loading}
-        className={`inline-flex items-center justify-center rounded-md px-2 py-1 text-xs font-medium border ${
-          canResend
-            ? "bg-slate-900 text-slate-50 border-slate-700 hover:bg-slate-800"
-            : "bg-slate-200 text-slate-400 border-slate-200 cursor-not-allowed"
-        } disabled:opacity-60`}
+        disabled={isSending || !!lead.confirmed_at}
+        className="text-xs px-3 py-1 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {loading ? "Reenviando..." : "Reenviar confirmação"}
+        {lead.confirmed_at
+          ? "Já confirmado"
+          : isSending
+          ? "Reenviando..."
+          : "Reenviar e-mail"}
       </button>
 
-      {message && (
-        <p className="text-[11px] text-emerald-600 bg-emerald-50 border border-emerald-100 rounded px-2 py-1">
-          {message}
-        </p>
+      {lastError && (
+        <span className="text-[10px] text-rose-600 max-w-[220px]">
+          {lastError}
+        </span>
       )}
 
-      {error && (
-        <p className="text-[11px] text-red-600 bg-red-50 border border-red-100 rounded px-2 py-1">
-          {error}
-        </p>
+      {lastSuccess && (
+        <span className="text-[10px] text-emerald-600 max-w-[220px]">
+          {lastSuccess}
+        </span>
       )}
     </div>
   );
