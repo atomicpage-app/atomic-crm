@@ -20,6 +20,7 @@ export default function ConfirmPage({
 
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -66,6 +67,34 @@ export default function ConfirmPage({
     run();
   }, [token, email]);
 
+  // Contagem regressiva para fechar a janela após confirmação
+  useEffect(() => {
+    if (status !== "success") {
+      setRemainingSeconds(null);
+      return;
+    }
+
+    setRemainingSeconds(20);
+
+    const intervalId = window.setInterval(() => {
+      setRemainingSeconds((prev) => {
+        if (prev === null) return prev;
+        if (prev <= 1) {
+          window.clearInterval(intervalId);
+          try {
+            window.close();
+          } catch {
+            // alguns navegadores bloqueiam window.close() se a janela não foi aberta via script
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [status]);
+
   const titleByStatus: Record<Status, string> = {
     idle: "Validando seu cadastro...",
     loading: "Validando seu cadastro...",
@@ -90,7 +119,6 @@ export default function ConfirmPage({
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-slate-100 px-4 py-10">
-      
       {/* LOGO DO PRODUTO */}
       <img
         src="https://atomicpage.com.br/src/images/Logo_AtomicPage.png"
@@ -107,14 +135,24 @@ export default function ConfirmPage({
         </p>
 
         {status === "loading" && (
-          <p className="text-sm text-slate-500">Processando sua confirmação...</p>
+          <p className="text-sm text-slate-500">
+            Processando sua confirmação...
+          </p>
         )}
 
         {status === "success" && (
-          <div className="mt-4 text-sm text-emerald-700">
+          <div className="mt-4 text-sm text-slate-800 space-y-2">
             <p>
               Obrigado por confirmar seu e-mail, {email || "empreendedor(a)"}.
             </p>
+            <p>Você já pode fechar esta janela.</p>
+            {remainingSeconds !== null && remainingSeconds > 0 && (
+              <p className="text-xs text-slate-500">
+                Esta janela será fechada automaticamente em{" "}
+                <span className="font-semibold">{remainingSeconds}</span>{" "}
+                segundo(s).
+              </p>
+            )}
           </div>
         )}
 
