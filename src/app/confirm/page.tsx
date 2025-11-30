@@ -22,7 +22,6 @@ export default function ConfirmPage({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    // Sem token → erro direto
     if (!token) {
       setStatus("error");
       setErrorMessage("Link de confirmação inválido ou incompleto.");
@@ -58,7 +57,9 @@ export default function ConfirmPage({
       } catch (err) {
         console.error(err);
         setStatus("error");
-        setErrorMessage("Ocorreu um erro inesperado. Tente novamente mais tarde.");
+        setErrorMessage(
+          "Ocorreu um erro inesperado. Tente novamente mais tarde."
+        );
       }
     };
 
@@ -88,27 +89,31 @@ export default function ConfirmPage({
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
-      <div className="max-w-lg w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl text-slate-50">
+    <main className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
+      <div className="max-w-lg w-full bg-white border border-slate-200 rounded-2xl p-8 shadow-xl text-slate-900">
         <h1 className="text-2xl font-semibold mb-2">
           {titleByStatus[status]}
         </h1>
-        <p className="text-sm text-slate-300 mb-6">
+        <p className="text-sm text-slate-600 mb-6">
           {subtitleByStatus[status]}
         </p>
 
         {status === "loading" && (
-          <p className="text-sm text-slate-400">Processando sua confirmação...</p>
+          <p className="text-sm text-slate-500">
+            Processando sua confirmação...
+          </p>
         )}
 
         {status === "success" && (
-          <div className="mt-4 text-sm text-emerald-300">
-            <p>Obrigado por confirmar seu e-mail, {email || "empreendedor(a)"}.</p>
+          <div className="mt-4 text-sm text-emerald-700">
+            <p>
+              Obrigado por confirmar seu e-mail, {email || "empreendedor(a)"}.
+            </p>
           </div>
         )}
 
         {status === "expired" && (
-          <div className="mt-4 text-sm text-amber-300">
+          <div className="mt-4 text-sm text-amber-700">
             <p>
               Para continuar, volte ao site e faça um novo cadastro para receber
               outro link de confirmação.
@@ -117,7 +122,7 @@ export default function ConfirmPage({
         )}
 
         {status === "not_found" && (
-          <div className="mt-4 text-sm text-rose-300">
+          <div className="mt-4 text-sm text-rose-700">
             <p>
               Verifique se você clicou no link mais recente recebido por e-mail
               ou solicite um novo cadastro.
@@ -126,7 +131,7 @@ export default function ConfirmPage({
         )}
 
         {status === "error" && (
-          <div className="mt-4 text-sm text-rose-300">
+          <div className="mt-4 text-sm text-rose-700">
             <p>{errorMessage}</p>
           </div>
         )}
