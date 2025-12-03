@@ -23,9 +23,8 @@ export default function LeadActionsCell({ lead }: LeadActionsCellProps) {
 
   const loading = isDeleting || isResending || isPending;
 
-  // Regra de unificação:
-  // - Reenvio só é permitido se o lead NÃO estiver confirmado
-  //   (ajuste aqui se seu status for diferente de "confirmed").
+  // Regra: só permite reenvio se o lead NÃO está confirmado
+  // Ajuste a condição se o valor real for outro que não "confirmed".
   const canResend =
     lead.status !== "confirmed" && lead.email && lead.email.trim().length > 0;
 
