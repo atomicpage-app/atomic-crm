@@ -1,88 +1,145 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
-type Lead = {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string | null;
-  created_at?: string;
-  confirmed_at?: string | null;
+type LeadStatus = "pending" | "confirmed" | "expired" | string;
+
+export type LeadActionsCellProps = {
+  lead: {
+    id: string;
+    name?: string | null;
+    email: string;
+    status: LeadStatus;
+    createdAt?: string | null;
+  };
 };
 
-type LeadActionsCellProps = {
-  lead: Lead;
-  onResendSuccess?: () => void;
-};
+export default function LeadActionsCell({ lead }: LeadActionsCellProps) {
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-export function LeadActionsCell({ lead, onResendSuccess }: LeadActionsCellProps) {
-  const [isSending, setIsSending] = useState(false);
-  const [lastError, setLastError] = useState<string | null>(null);
-  const [lastSuccess, setLastSuccess] = useState<string | null>(null);
+  const loading = isDeleting || isResending || isPending;
 
-  const handleResend = async () => {
-    setIsSending(true);
-    setLastError(null);
-    setLastSuccess(null);
+  // Regra de unificação:
+  // - Reenvio só é permitido se o lead NÃO estiver confirmado
+  //   (ajuste aqui se seu status for diferente de "confirmed").
+  const canResend =
+    lead.status !== "confirmed" && lead.email && lead.email.trim().length > 0;
+
+  async function handleResend() {
+    if (!canResend) {
+      return;
+    }
+
+    if (
+      !window.confirm(
+        "Reenviar o e-mail de confirmação para este lead? Isso irá gerar um novo link de confirmação."
+      )
+    ) {
+      return;
+    }
 
     try {
-      const res = await fetch("/api/lead/resend", {
+      setIsResending(true);
+
+      const response = await fetch("/api/lead/resend-confirmation", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ id: lead.id }),
+        body: JSON.stringify({
+          leadId: lead.id,
+          email: lead.email,
+        }),
       });
 
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok || !data?.ok) {
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
         const message =
-          data?.message ||
-          "Não foi possível reenviar o e-mail de confirmação. Tente novamente.";
-        setLastError(message);
-        return;
+          (data && (data.error || data.message)) ||
+          "Falha ao reenviar o e-mail de confirmação.";
+        throw new Error(message);
       }
 
-      setLastSuccess("E-mail de confirmação reenviado com sucesso.");
-      if (onResendSuccess) onResendSuccess();
-    } catch (e: any) {
-      setLastError(
-        e?.message ||
-          "Ocorreu um erro ao tentar reenviar o e-mail de confirmação."
+      alert("E-mail de confirmação reenviado com sucesso.");
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (error) {
+      console.error(error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Erro inesperado ao reenviar o e-mail de confirmação."
       );
     } finally {
-      setIsSending(false);
+      setIsResending(false);
     }
-  };
+  }
+
+  async function handleDelete() {
+    if (
+      !window.confirm(
+        "Tem certeza que deseja excluir este lead? Esta ação não pode ser desfeita."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+
+      // ATENÇÃO: este path assume rota DELETE em /api/leads/[id].
+      // Se sua API estiver diferente (ex.: /api/lead/[id]), ajuste aqui.
+      const response = await fetch(`/api/leads/${lead.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        const message =
+          (data && (data.error || data.message)) ||
+          "Falha ao excluir o lead.";
+        throw new Error(message);
+      }
+
+      alert("Lead excluído com sucesso.");
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (error) {
+      console.error(error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Erro inesperado ao excluir o lead."
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   return (
-    <div className="flex flex-col gap-1 items-start">
+    <div className="flex items-center gap-2">
       <button
         type="button"
         onClick={handleResend}
-        disabled={isSending || !!lead.confirmed_at}
-        className="text-xs px-3 py-1 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={!canResend || loading}
+        className="rounded-md border border-sky-500 px-2 py-1 text-xs font-medium text-sky-500 transition hover:bg-sky-500/10 disabled:cursor-not-allowed disabled:border-slate-600 disabled:text-slate-500"
       >
-        {lead.confirmed_at
-          ? "Já confirmado"
-          : isSending
-          ? "Reenviando..."
-          : "Reenviar e-mail"}
+        {isResending || isPending ? "Reenviando..." : "Reenviar e-mail"}
       </button>
-
-      {lastError && (
-        <span className="text-[10px] text-rose-600 max-w-[220px]">
-          {lastError}
-        </span>
-      )}
-
-      {lastSuccess && (
-        <span className="text-[10px] text-emerald-600 max-w-[220px]">
-          {lastSuccess}
-        </span>
-      )}
+      <button
+        type="button"
+        onClick={handleDelete}
+        disabled={loading}
+        className="rounded-md border border-red-500 px-2 py-1 text-xs font-medium text-red-500 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:border-slate-600 disabled:text-slate-500"
+      >
+        {isDeleting || isPending ? "Excluindo..." : "Excluir"}
+      </button>
     </div>
   );
 }
