@@ -4,7 +4,6 @@ import { createClient } from "@supabase/supabase-js";
 type LeadRow = {
   id: string;
   status: string | null;
-  created_at: string | null;
 };
 
 type Metrics = {
@@ -16,12 +15,13 @@ type Metrics = {
 };
 
 async function fetchLeadsForMetrics(): Promise<LeadRow[]> {
-  const url = process.env.SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url =
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
   if (!url || !serviceKey) {
     console.error(
-      "[DASHBOARD_METRICS] SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados."
+      "[DASHBOARD_METRICS] SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados."
     );
     return [];
   }
@@ -32,10 +32,10 @@ async function fetchLeadsForMetrics(): Promise<LeadRow[]> {
     },
   });
 
+  // Importante: usar a VIEW de leads com status consolidado
   const { data, error } = await supabase
-    .from("leads")
-    .select("id, status, created_at")
-    .order("created_at", { ascending: false });
+    .from("v_leads_with_status")
+    .select("id, status");
 
   if (error) {
     console.error("[DASHBOARD_METRICS] Erro ao buscar leads:", error);
@@ -45,7 +45,6 @@ async function fetchLeadsForMetrics(): Promise<LeadRow[]> {
   return (data || []).map((row) => ({
     id: row.id,
     status: row.status ?? null,
-    created_at: row.created_at ?? null,
   }));
 }
 
