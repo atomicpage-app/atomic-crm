@@ -1,27 +1,55 @@
-import LeadsTablePage from "@/app/(admin)/leads/page";
+import LeadsPage from "@/app/(admin)/leads/page";
+import { createClient } from "@supabase/supabase-js";
 
-type Lead = {
+type LeadRow = {
   id: string;
   status: string | null;
-  created_at?: string | null;
+  created_at: string | null;
 };
 
-async function fetchLeads(): Promise<Lead[]> {
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-  const res = await fetch(`${baseUrl}/api/leads`, {
-    method: "GET",
-    cache: "no-store",
-  });
+type Metrics = {
+  total: number;
+  confirmed: number;
+  pending: number;
+  expired: number;
+  confirmationRate: number;
+};
 
-  if (!res.ok) {
-    console.error("[DASHBOARD] Erro ao buscar leads:", await res.text());
-    throw new Error("Falha ao carregar leads.");
+async function fetchLeadsForMetrics(): Promise<LeadRow[]> {
+  const url = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceKey) {
+    console.error(
+      "[DASHBOARD_METRICS] SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados."
+    );
+    return [];
   }
 
-  return res.json();
+  const supabase = createClient(url, serviceKey, {
+    auth: {
+      persistSession: false,
+    },
+  });
+
+  const { data, error } = await supabase
+    .from("leads")
+    .select("id, status, created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[DASHBOARD_METRICS] Erro ao buscar leads:", error);
+    return [];
+  }
+
+  return (data || []).map((row) => ({
+    id: row.id,
+    status: row.status ?? null,
+    created_at: row.created_at ?? null,
+  }));
 }
 
-function countMetrics(leads: Lead[]) {
+function computeMetrics(leads: LeadRow[]): Metrics {
   const total = leads.length;
 
   const confirmed = leads.filter(
@@ -47,9 +75,9 @@ function countMetrics(leads: Lead[]) {
   };
 }
 
-export default async function LeadsDashboardWithMetrics() {
-  const leads = await fetchLeads();
-  const metrics = countMetrics(leads);
+export default async function LeadsDashboardPage() {
+  const leads = await fetchLeadsForMetrics();
+  const metrics = computeMetrics(leads);
 
   return (
     <div className="min-h-screen bg-slate-950 px-4 py-8 text-slate-50">
@@ -68,36 +96,38 @@ export default async function LeadsDashboardWithMetrics() {
           </p>
         </header>
 
-        {/* METRICS */}
+        {/* MÉTRICAS BÁSICAS */}
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
             <p className="text-xs text-slate-400">Total de Leads</p>
-            <p className="mt-1 text-3xl font-bold text-slate-50">{metrics.total}</p>
+            <p className="mt-1 text-3xl font-bold text-slate-50">
+              {metrics.total}
+            </p>
           </div>
 
           <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
             <p className="text-xs text-slate-400">Confirmados</p>
-            <p className="mt-1 text-3xl font-bold text-green-400">
+            <p className="mt-1 text-3xl font-bold text-emerald-400">
               {metrics.confirmed}
             </p>
           </div>
 
           <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
             <p className="text-xs text-slate-400">Pendentes</p>
-            <p className="mt-1 text-3xl font-bold text-yellow-400">
+            <p className="mt-1 text-3xl font-bold text-amber-400">
               {metrics.pending}
             </p>
           </div>
 
           <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
             <p className="text-xs text-slate-400">Expirados</p>
-            <p className="mt-1 text-3xl font-bold text-red-400">
+            <p className="mt-1 text-3xl font-bold text-rose-400">
               {metrics.expired}
             </p>
           </div>
         </section>
 
-        {/* CONFIRMATION RATE */}
+        {/* TAXA DE CONFIRMAÇÃO */}
         <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg">
           <p className="text-xs text-slate-400 uppercase tracking-wider">
             Taxa de Confirmação
@@ -106,13 +136,13 @@ export default async function LeadsDashboardWithMetrics() {
             {metrics.confirmationRate.toFixed(1)}%
           </p>
           <p className="mt-1 text-sm text-slate-500">
-            Proporção de leads que confirmaram o e-mail.
+            Proporção de leads que confirmaram o e-mail em relação ao total.
           </p>
         </section>
 
-        {/* TABLE (importando a página antiga como componente) */}
+        {/* TABELA ANTIGA REAPROVEITADA */}
         <section className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg">
-          <LeadsTablePage />
+          <LeadsPage />
         </section>
       </div>
     </div>
